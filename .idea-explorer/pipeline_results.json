@@ -1,0 +1,27 @@
+{
+  "success": true,
+  "stages": {
+    "resource_finder": {
+      "success": true,
+      "completion_marker": "/data/hypogenicai/workspaces/model-character-limit-claude/.resource_finder_complete",
+      "outputs": {
+        "literature_review": "/data/hypogenicai/workspaces/model-character-limit-claude/literature_review.md",
+        "resources_catalog": "/data/hypogenicai/workspaces/model-character-limit-claude/resources.md",
+        "papers_dir": "/data/hypogenicai/workspaces/model-character-limit-claude/papers",
+        "datasets_dir": "/data/hypogenicai/workspaces/model-character-limit-claude/datasets",
+        "code_dir": "/data/hypogenicai/workspaces/model-character-limit-claude/code"
+      },
+      "log_file": "/data/hypogenicai/workspaces/model-character-limit-claude/logs/resource_finder_claude.log",
+      "transcript_file": "/data/hypogenicai/workspaces/model-character-limit-claude/logs/resource_finder_claude_transcript.jsonl",
+      "elapsed_time": 959.6476917266846
+    },
+    "experiment_runner": {
+      "success": true,
+      "return_code": 0,
+      "elapsed_time": 2873.271202325821,
+      "log_file": "/data/hypogenicai/workspaces/model-character-limit-claude/logs/execution_claude.log",
+      "transcript_file": "/data/hypogenicai/workspaces/model-character-limit-claude/logs/execution_claude_transcript.jsonl"
+    }
+  },
+  "work_dir": "/data/hypogenicai/workspaces/model-character-limit-claude"
+}
