@@ -1,0 +1,23 @@
+idea:
+  title: How many characters can a model keep track of?
+  domain: nlp
+  hypothesis: 'Given a new story, there is a limit to the number of different characters
+    a language model can keep track of in-context. By identifying the point at which
+    the model struggles, we can gain insight into the mechanisms it uses to track
+    characters and their attributes.
+
+    '
+  background:
+    description: "Some stories have a lot of characters\u2014think War and Peace or\
+      \ the Tale of Genji. Given a new story, in-context, how many different characters\
+      \ can a model keep track of? And can we use the points at which the model struggles\
+      \ to help us figure out what mechanism it uses to keep track of different characters\
+      \ and their attributes? How good are models at this anyway?"
+  metadata:
+    source: IdeaHub
+    source_url: https://hypogenic.ai/ideahub/idea/ihOvpOiQwTAAjxxdtWuv
+    idea_id: how_many_characters_can_a_mode_20251228_183649_dd158659
+    created_at: '2025-12-28T18:36:49.125801'
+    status: submitted
+    github_repo_name: model-character-limit-claude
+    github_repo_url: https://github.com/Hypogenic-AI/model-character-limit-claude
