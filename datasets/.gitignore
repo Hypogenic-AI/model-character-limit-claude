@@ -1,9 +1,23 @@
-# Exclude all data files (can be large)
+# Exclude large data files (can be regenerated or re-downloaded; see README.md)
 *
 
-# But include documentation and small samples
+# Keep documentation and config
 !.gitignore
 !README.md
 !**/README.md
+
+# Keep small existing files
 !character_tracking_synthetic.json
 !narrativeqa_samples.json
+
+# Keep sample files directory
+!samples/
+!samples/**
+
+# Boxes dataset: generated and original extracted files are excluded by default (*)
+# OpenToM: large JSON files excluded by default (*)
+# ProPara: raw + HuggingFace files excluded by default (*)
+# SimpleToM: JSONL files excluded by default (*)
+# NarrativeQA: JSONL files excluded by default (*)
+# Theory of Mind (grimulkan): excluded by default (*)
+# CHATTER: excluded by default (*)

@@ -1,0 +1,17 @@
+{
+  "character_counts": [
+    2,
+    4,
+    8,
+    16,
+    32
+  ],
+  "stories_per_count": 5,
+  "state_changes_per_char": 2,
+  "models": [
+    "gpt-4.1-mini",
+    "gpt-4.1"
+  ],
+  "timestamp": "2026-03-22T23:55:07.514440",
+  "seed": 42
+}

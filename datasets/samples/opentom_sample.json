@@ -1,0 +1,142 @@
+[
+  {
+    "plot": "Diego entered the patio.\nAmir entered the patio.\nBoth Diego and Amir noticed that the scarf is in the basket in the patio.\nDiego moved the scarf to the a donation bin and Amir witnessed the action.",
+    "plot_info": {
+      "mover": "Diego",
+      "eoi": "scarf",
+      "original_place": "basket",
+      "move_to_place": "a donation bin",
+      "observer": "Amir"
+    },
+    "preferences": {
+      "mover": "Diego hates scarf.",
+      "observer": "Amir likes scarf.",
+      "mover_observer": "",
+      "observer_mover": "Amir mistakenly think that Diego likes scarf."
+    },
+    "personality": "Diego is an inconsiderate person.",
+    "sentiment_statement": "Diego hates scarf.",
+    "true_sentiment": "the most negative",
+    "intention": "get rid of it and make it accessible to someone who may actually want it",
+    "new_location": "a donation bin",
+    "observed": true,
+    "question": {
+      "question": "As Amir, what is your attitude towards Diego's action of moving scarf from basket to a donation bin?",
+      "answer": "negative",
+      "type": "attitude"
+    },
+    "narrative": "Diego and Amir were both residents of the same apartment complex. They had known each other for quite some time, but they couldn't be more different in their tastes and preferences. One thing that particularly divided them was their opinion on scarves. Diego despised scarves, finding them to be unnecessary and bothersome. On the other hand, Amir adored scarves, always wearing one to complete his outfit.\n\nOne sunny afternoon, both Diego and Amir happened to stroll into the patio at the same time. As they approached the central basket, their eyes fell upon a colorful scarf lying inside. Diego's face contorted in disdain while Amir's eyes lit up with delight. \n\nIn that moment, without exchanging any words, Diego swiftly reached into the basket and snatched the scarf. Amir watched curiously as Diego took a few steps towards a nearby donation bin. With a resolute expression, Diego dropped the scarf into the bin, relieving himself of its presence.\n\nAnd just like that, the scarf that once rested in the patio basket had found a new temporary home in the donation bin, waiting to be discovered by someone who would appreciate its warmth and beauty. Diego turned around to leave the patio, completely unaware that his actions had not gone unnoticed by Amir."
+  },
+  {
+    "plot": "Paxton entered the pantry.\nHadley entered the pantry.\nBoth Hadley and Paxton noticed that the hat is in the container in the pantry.\nHadley moved the hat to the the trash can and Paxton witnessed the action.",
+    "plot_info": {
+      "mover": "Hadley",
+      "eoi": "hat",
+      "original_place": "container",
+      "move_to_place": "the trash can",
+      "observer": "Paxton"
+    },
+    "preferences": {
+      "mover": "Hadley hates hat",
+      "observer": "Paxton likes hat.",
+      "mover_observer": "",
+      "observer_mover": ""
+    },
+    "personality": "Hadley is a negativistic person.",
+    "sentiment_statement": "Hadley wants to get rid of the hat.",
+    "true_sentiment": "the action that is the most adversarial to the hat",
+    "intention": "dispose of the hat",
+    "new_location": "the trash can",
+    "observed": true,
+    "question": {
+      "question": "As Paxton, what is your attitude towards Hadley's action of moving hat from container to the trash can?",
+      "answer": "negative",
+      "type": "attitude"
+    },
+    "narrative": "Hadley had always despised the hat. It was a simple, unremarkable hat, but for some reason, it irked Hadley to no end. On the other hand, Paxton adored the hat. He thought it was stylish and added a touch of flair to any outfit. It was a constant point of disagreement between them.\n\nOne day, as fate would have it, both Hadley and Paxton found themselves in the pantry. Their eyes were drawn to a container on the shelf where the hat sat innocently. The hat seemed to mock Hadley, knowing how much Paxton admired it. \n\nHadley, being a negativistic person, couldn't stand the sight of the hat any longer. Determined to rid themselves of the source of their disagreement, Hadley swiftly snatched the hat and moved towards the trash can. Paxton stood frozen, unable to comprehend what was happening before his eyes. And just like that, the main event unfolded, leaving the air heavy with tension and uncertainty."
+  },
+  {
+    "plot": "Abraham entered the office.\nMarcos entered the office.\nBoth Abraham and Marcos noticed that the melon is in the bottle in the office.\nAbraham moved the melon to the the outdoor shed and Marcos witnessed the action.",
+    "plot_info": {
+      "mover": "Abraham",
+      "eoi": "melon",
+      "original_place": "bottle",
+      "move_to_place": "the outdoor shed",
+      "observer": "Marcos"
+    },
+    "preferences": {
+      "mover": "Abraham hates melon.",
+      "observer": "Marcos likes melon.",
+      "mover_observer": "",
+      "observer_mover": "Marcos mistakenly think that Abraham likes melon."
+    },
+    "personality": "Abraham is an inconsiderate person.",
+    "sentiment_statement": "Abraham hates melon.",
+    "true_sentiment": "the most negative",
+    "intention": "separate it from other food items and discourage anyone from easily accessing it",
+    "new_location": "the outdoor shed",
+    "observed": true,
+    "question": {
+      "question": "As Marcos, what is your attitude towards Abraham's action of moving melon from bottle to the outdoor shed?",
+      "answer": "negative",
+      "type": "attitude"
+    },
+    "narrative": "Abraham despised melon with every fiber of his being. Its bright orange flesh, juicy and sweet, made his stomach churn with disgust. On the other hand, Marcos, his colleague, loved the succulent fruit, savoring every bite with pure delight. \n\nOne sunny morning, Abraham and Marcos entered the office simultaneously. As they settled into their workstations, their eyes were drawn to a glass bottle placed strategically on a table, holding a tempting slice of melon. Abraham's frown deepened, while Marcos' eyes lit up with anticipation. \n\nAbraham, known for his inconsiderate nature, couldn't bear the thought of the melon mingling with the other food items in the office. Determined to separate it and discourage others from indulging in it, he swiftly made his way to the bottle and snatched it. Without uttering a word, he carried it outside, placing it in the small outdoor shed. Marcos observed the entire scene, his curiosity piqued by Abraham's peculiar actions.\n\nAnd with that, the story comes to an abrupt halt, leaving the readers wondering about the consequences of Abraham's decision and how it would impact the relationship between him and Marcos."
+  },
+  {
+    "plot": "Jeremy entered the garden.\nJayden entered the garden.\nBoth Jeremy and Jayden noticed that the peas is in the basket in the garden.\nJayden exited the garden.\nJayden entered the office.\nJeremy moved the peas to the top shelf and Jayden did not witness the event.",
+    "plot_info": {
+      "mover": "Jeremy",
+      "eoi": "peas",
+      "original_place": "basket",
+      "move_to_place": "top shelf",
+      "observer": "Jayden"
+    },
+    "preferences": {
+      "mover": "Jeremy hates peas.",
+      "observer": "Jayden hates peas.",
+      "mover_observer": "",
+      "observer_mover": "Jayden mistakenly think that Jeremy likes peas."
+    },
+    "personality": "Jeremy is an inconsiderate person.",
+    "sentiment_statement": "Jeremy hates peas.",
+    "true_sentiment": "the most negative",
+    "intention": "make them less visible and accessible",
+    "new_location": "top shelf",
+    "observed": false,
+    "question": {
+      "question": "As Jayden, what is your attitude towards Jeremy's action of moving peas from basket to top shelf?",
+      "answer": "positive",
+      "type": "attitude"
+    },
+    "narrative": "Jeremy and Jayden were two peas in a pod, or so they thought. They shared many similarities, but there was one thing they both detested - peas. Yes, those tiny, green vegetables were their ultimate nemesis.\n\nOne sunny day, Jeremy and Jayden found themselves strolling through a beautiful garden. As they ventured further, their eyes locked onto a familiar sight - a basket filled to the brim with peas. A disapproving frown crept upon their faces simultaneously. However, Jayden suddenly excused himself and hurriedly made his way out of the garden, leaving Jeremy to face the peas alone.\n\nNot one to be defeated by his loathing for the green spheres, Jeremy hatched a plan. In the spirit of his inconsiderate nature, he decided to relocate the peas. Determined to diminish their visibility, Jeremy moved them to the top shelf, away from prying eyes. Unbeknownst to him, Jayden was absent during this sneaky act, and he remained oblivious to the peas' new hiding spot."
+  },
+  {
+    "plot": "Andrew entered the back_yard.\nRichard entered the back_yard.\nBoth Andrew and Richard noticed that the hat is in the bottle in the back_yard.\nRichard exited the back_yard.\nRichard entered the master_bedroom.\nAndrew moved the hat to the Room and Richard did not witness the event.",
+    "plot_info": {
+      "mover": "Andrew",
+      "eoi": "hat",
+      "original_place": "bottle",
+      "move_to_place": "Room",
+      "observer": "Richard"
+    },
+    "preferences": {
+      "mover": "Andrew likes hat",
+      "observer": "Richard hates hat.",
+      "mover_observer": "",
+      "observer_mover": ""
+    },
+    "personality": "Andrew is a negativistic person.",
+    "sentiment_statement": "Andrew wants to show-off the hat.",
+    "true_sentiment": "is the most show-off action to the hat",
+    "intention": "showcase it as part of his collection to friends and guests",
+    "new_location": "Room",
+    "observed": false,
+    "question": {
+      "question": "As Richard, what is your attitude towards Andrew's action of moving hat from bottle to Andrew's room?",
+      "answer": "neutral",
+      "type": "attitude"
+    },
+    "narrative": "Andrew and Richard were two very different individuals. Andrew loved hats, while Richard despised them. It was a peculiar quirk that set them apart. One sunny afternoon, both Andrew and Richard found themselves in the back yard. As they looked around, they couldn't help but notice a hat trapped inside a glass bottle. \n\nCuriosity piqued, Andrew decided to explore further. He stayed in the back yard, studying the hat trapped in the bottle. Richard, on the other hand, chose to leave the back yard and head towards the master bedroom. \n\nAndrew was an optimistic and showy person. Knowing Richard's disdain for hats, he saw an opportunity to showcase this unique find. With a mischievous grin, Andrew carefully picked up the bottle and moved it to his own room. He imagined his friends and guests admiring the hat as part of his growing collection. Little did he know, Richard had already left the back yard and had no knowledge of Andrew's actions.\n\nAnd just like that, the hat found a new home, hidden away in Andrew's room. The story ends here, leaving us with the anticipation of what might unfold when Richard discovers Andrew's secret."
+  }
+]

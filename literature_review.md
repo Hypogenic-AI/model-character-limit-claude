@@ -1,344 +1,205 @@
-# Literature Review: Character Tracking Limits in Language Models
+# Literature Review: How Many Characters Can a Model Keep Track Of?
 
 ## Research Area Overview
 
-This literature review examines the ability of large language models (LLMs) to track entities, characters, and their changing states across textual narratives. The research question focuses on **how many characters a model can simultaneously track** and what mechanisms underlie this capability.
-
-The field spans several related areas:
-1. **Entity/State Tracking**: Tracking how objects and entities change as text unfolds
-2. **Long-Context Understanding**: How models use information across extended inputs
-3. **Working Memory in LLMs**: Analogies to human cognitive limits
-4. **Narrative Comprehension**: Understanding character roles, attributes, and relationships
+This review surveys work on language models' ability to track entities (characters, objects, variables) and their changing states across text. The core question is: **at what point does tracking break down as the number of entities or state changes increases?** This intersects entity tracking in NLP, narrative understanding, theory-of-mind benchmarks, and mechanistic interpretability of transformers.
 
 ---
 
 ## Key Papers
 
-### Paper 1: Entity Tracking in Language Models
-- **Authors**: Najoung Kim, Sebastian Schuster
-- **Year**: 2023
-- **Source**: ACL 2023
-- **File**: `papers/2305.02363_entity_tracking_in_language_models.pdf`
+### 1. Entity Tracking in Language Models (Kim & Schuster, 2023)
+- **Source**: ACL 2023 | arXiv:2305.02363
+- **Key Contribution**: Created a controlled synthetic "Boxes" benchmark to test entity tracking without shortcuts. Showed that prior claims of entity tracking (Li et al., 2021) were inflated by trivial baselines.
+- **Methodology**: 7 boxes, 100 object nouns, 12 state-changing operations per scenario. Models must predict box contents after N operations. Four harder variants test contextual references (AmbiRef, MoveContents), surface form generalization (AltForms), and compositional generalization (NumOps).
+- **Datasets Used**: New "Boxes" dataset (7 variants); reanalysis of Alchemy and TextWorld
+- **Key Results**:
+  - GPT-3 and Flan-T5: near-zero accuracy on non-trivial tracking (essentially repeat initial state)
+  - GPT-3.5 (code-pretrained): >25% accuracy even after 7 operations per box, well above random baseline
+  - **Code pretraining is the key factor**, not RLHF or instruction tuning
+  - Finetuned T5-base achieves near-perfect accuracy on base split, proving the task is learnable
+  - Performance degrades monotonically with operation count; steepest drop at 0-3 operations
+  - Context-dependent operations (MoveContents, AmbiRef) accelerate breakdown
+- **Code**: https://github.com/sebschu/entity-tracking-lms
+- **Relevance**: **Central paper**. Directly measures how many state changes models can track per entity across 7 simultaneous entities.
 
-#### Key Contribution
-First systematic investigation of whether LLMs can track entities through state changes in discourse. Proposes a controlled evaluation using a box-moving task where objects are placed in boxes and moved between them.
+### 2. (How) Do Language Models Track State? (Li, Guo & Andreas, 2025)
+- **Source**: ICML 2025 | arXiv:2503.02854
+- **Key Contribution**: Mechanistic interpretability study revealing two distinct algorithms transformers learn for state tracking: Associative Algorithm (AA) and Parity-Associative Algorithm (PAA).
+- **Methodology**: Permutation composition task (S3 and S5 symmetric groups) as a principled proxy for state tracking. S5 is NC1-complete, meaning any finite-state tracking task can be reduced to it. Uses probing, activation patching, and attention analysis on Pythia-160M and GPT-2 family models.
+- **Datasets Used**: 1M synthetic permutation sequences of length 100
+- **Key Results**:
+  - Models learn one of two algorithms: AA (hierarchical parallel scan, log-depth) or PAA (parity-first parallel computation, then associative scan for remainder)
+  - AA generalizes better to longer sequences; PAA is more brittle
+  - Architecture and initialization determine which algorithm emerges, **not model size**
+  - Models generalize perfectly up to training length (100), then degrade sharply at a "cutoff length"
+  - Code/topic-model pretraining steers toward AA; parity pretraining steers toward PAA
+  - Same associative signatures appear in natural-language versions of the task
+- **Code**: https://github.com/belindal/state-tracking
+- **Relevance**: Reveals the **internal mechanisms** for state tracking — important for understanding *why* models fail at higher entity counts.
 
-#### Methodology
-- **Task**: Given initial state of boxes containing objects + sequence of move operations, predict final state
-- **Example**: "Box 1 contains the book. Move the book to Box 2. Box 2 contains ____"
-- **Dataset**: Synthetically generated with 7 boxes, up to 12 operations
-- **Models tested**: GPT-3, GPT-3.5, Flan-T5
+### 3. Code Pretraining Improves Entity Tracking (Kim, Schuster & Toshniwal, 2024)
+- **Source**: arXiv:2405.21068
+- **Key Contribution**: Systematic confirmation that code pretraining causally improves entity tracking, using matched model pairs (base vs. code, holding architecture constant).
+- **Methodology**: Same Boxes task. Compared Llama 2 vs Code Llama, DeepSeek vs DeepSeek-Coder, Gemma vs CodeGemma across 7B/13B/70B scales. Also tested math-trained and alignment-tuned variants.
+- **Key Results**:
+  - Code training consistently helps; amount of code data matters (2T > 500B tokens)
+  - Math training provides minimal benefit
+  - **Best result: Code Llama 70B-Instruct at 64.9% on non-trivial examples**
+  - 7B models cannot reliably beat random baseline at 5-7 operations — hard limit for small models
+  - Alignment tuning helps base models more than code models
+- **Relevance**: Quantifies the **scaling limits** — even the best 70B code model only achieves 65% on multi-step tracking.
 
-#### Key Findings
-1. **Only GPT-3.5 (code-trained) shows entity tracking ability** - text-only pretrained models fail
-2. **Performance degrades with complexity**: More operations = lower accuracy
-3. **Fine-tuned T5 can learn tracking**: Small models can acquire this capability
-4. **Lexical overlap matters**: Generalization to new entities/operations is limited
+### 4. Too Long, Didn't Model (TLDM) (Hamilton et al., 2025)
+- **Source**: arXiv:2505.14925
+- **Key Contribution**: Benchmark showing all frontier LLMs lose stable narrative understanding beyond 64K tokens, with entity/character tracking (storyworld description) degrading fastest of three tasks.
+- **Methodology**: 40 English novels from Project Gutenberg. Three tasks: summarization, storyworld description (character locations), narrative time estimation. Compares full-novel outputs to chapter-level (short-context) outputs across 7 frontier models (GPT-4.1, Llama 4 Scout, DeepSeek V3, Gemini 2.0 Flash, Gemma 3, Qwen 3, Mistral Small).
+- **Key Results**:
+  - **Storyworld tracking (character locations) collapses most sharply** with novel length
+  - No model retains stable understanding beyond **64K tokens** despite claiming 1M+ context windows
+  - GPT-4.1 most robust; open-weight models degrade fastest
+  - Truncating to relevant section consistently improves performance — extraneous context hurts
+  - Performance scales linearly with parameter count
+  - Shuffling chapters hurts storyworlds but not time estimates
+- **Relevance**: **Directly measures character tracking in real narratives** at scale.
 
-#### Relevance to Our Research
-- **Critical baseline**: Their box-moving task is directly relevant to character tracking
-- **Methodology**: Synthetic data generation approach is applicable
-- **Finding**: Code pretraining correlates with entity tracking - suggests computational abstraction matters
+### 5. CHATTER: Character Attribution for Narrative Understanding (Baruah & Narayanan, 2025)
+- **Source**: arXiv:2411.05227
+- **Key Contribution**: Largest character attribution dataset (88K character-trope pairs from 660 movies, 2,998 characters, 12,967 tropes). Tests whether LLMs can identify character traits from screenplays.
+- **Methodology**: Binary classification of character-trope pairs. Full screenplay context (~42K tokens average, up to 158K). Five prompting strategies across closed and open-source models.
+- **Key Results**:
+  - Full script context actually *decreases* performance for most models (vs. priors alone)
+  - Gemini-1.5-Flash achieves 81.9% accuracy with priors; drops to 72.4% with full script
+  - Zero-shot segment prompting outperforms few-shot — adding examples hurts
+  - Models likely exploit pretraining knowledge of TVTropes
+- **Relevance**: Shows models fail to aggregate **distributed character information** across long contexts.
 
----
+### 6. OpenToM: Theory-of-Mind Benchmark (Xu et al., 2024)
+- **Source**: ACL 2024 | arXiv:2402.06044
+- **Key Contribution**: ToM benchmark with 696 narratives, 16K questions testing physical-world and psychological mental state tracking for multiple characters.
+- **Code**: https://github.com/seacowx/OpenToM
+- **Relevance**: Tests per-character belief and location tracking — core to the research question.
 
-### Paper 2: Lost in the Middle: How Language Models Use Long Contexts
-- **Authors**: Nelson F. Liu, Kevin Lin, John Hewitt, et al.
-- **Year**: 2024
-- **Source**: TACL 2024
-- **File**: `papers/2307.03172_lost_in_the_middle.pdf`
+### 7. Locations of Characters in Narratives (2025)
+- **Key Contribution**: Manually annotated datasets for character location tracking in fairy tales (Andersen, 15 stories) and novels (Persuasion).
+- **Key Results**: Best LLM achieves only ~62% on Andersen, ~56% on Persuasion.
+- **Relevance**: Direct benchmark for spatial entity tracking with low accuracy.
 
-#### Key Contribution
-Demonstrates that LLMs have a U-shaped performance curve - they use information at the beginning and end of context better than information in the middle.
+### 8. Finding Flawed Fictions (2025)
+- **Key Contribution**: FLAWEDFICTIONS benchmark for plot hole detection. LLM performance degrades sharply as story length increases.
+- **Relevance**: Plot hole detection requires tracking character states and story consistency.
 
-#### Methodology
-- **Tasks**: Multi-document QA and key-value retrieval
-- **Setup**: Place relevant information at different positions in context
-- **Models**: GPT-3.5-Turbo, Claude-1.3, MPT-30B, LongChat-13B
+### 9. Mary, the Cheeseburger-Eating Vegetarian (2025)
+- **Key Contribution**: Shows LLMs' internal representations can detect character incoherence, but generated responses cannot reliably distinguish coherent from incoherent narratives. More sensitive to world-knowledge violations than character-trait violations.
+- **Relevance**: Demonstrates gap between representation and behavior for character tracking.
 
-#### Key Findings
-1. **U-shaped performance curve**: Best at beginning/end, worst in middle
-2. **Performance degrades with more documents**: Adding context can hurt
-3. **Even long-context models struggle**: 32K context doesn't mean 32K is usable
-4. **Position effects persist**: True for both retrieval and reasoning tasks
+### 10. EvolvTrip: Temporal Theory-of-Mind Graphs (2025)
+- **Key Contribution**: Proposes external knowledge graphs to compensate for LLM failures in tracking evolving character mental states in literature. Creates LitCharToM benchmark.
+- **Relevance**: Addresses the failure mode and proposes augmentation strategy.
 
-#### Implications for Character Tracking
-- Characters introduced in the middle of a story may be tracked worse
-- Order of character introduction matters
-- More characters = more potential for "lost in the middle" effects
+### 11. SCORE: Story Coherence via RAG (2025)
+- **Key Contribution**: Uses item status tracking + episode summaries + RAG for narrative coherence.
+- **Relevance**: Engineering solution implies the character tracking limitation exists and needs external augmentation.
 
----
+### 12. Tracking Discrete and Continuous Entity State (Dalvi et al., 2019)
+- **Source**: NAACL 2019 | arXiv:1904.03518
+- **Key Contribution**: Foundational structured prediction for entity state tracking in procedural text (ProPara dataset).
+- **Relevance**: Established task formulation and evaluation metrics.
 
-### Paper 3: RULER: What's the Real Context Size of Your Long-Context LMs?
-- **Authors**: Cheng-Ping Hsieh, Simeng Sun, Samuel Kriman, et al.
-- **Year**: 2024
-- **Source**: COLM 2024
-- **File**: `papers/2404.06654_ruler_benchmark.pdf`
+### 13. Lost in the Middle (Liu et al., 2024)
+- **Source**: TACL 2024 | arXiv:2307.03172
+- **Key Contribution**: U-shaped performance curve — models use information at beginning and end of context better than the middle.
+- **Relevance**: Characters introduced mid-story may be tracked worse.
 
-#### Key Contribution
-Proposes a comprehensive benchmark with four task categories beyond simple retrieval, including **Variable Tracking** - a proxy for entity/character tracking.
-
-#### Task Categories
-1. **Retrieval**: Extended needle-in-haystack variants
-2. **Multi-hop Tracing**: Variable tracking across multiple hops
-3. **Aggregation**: Counting, common words extraction
-4. **Question Answering**: With distracting information
-
-#### Variable Tracking Task
-```
-VAR X1 = 12345
-VAR X2 = X1
-VAR X3 = X2
-Q: Find all variables assigned value 12345
-A: X1, X2, X3
-```
-
-#### Key Findings
-1. **All models degrade with length**: Even 128K context models fail at claimed lengths
-2. **Variable tracking is hard**: Multi-hop chains especially challenging
-3. **Only Gemini-1.5 and GPT-4 perform well** at longer contexts
-4. **Claimed context size ≠ effective context size**
-
-#### Relevance to Character Tracking
-- Variable tracking directly analogous to character attribute tracking
-- Multi-hop chains = tracking character state through multiple changes
-- Benchmark methodology applicable to character experiments
-
----
-
-### Paper 4: One Thousand and One Pairs (NoCha Benchmark)
-- **Authors**: Marzena Karpinska, Katherine Thai, Kyle Lo, Tanya Goyal, Mohit Iyyer
-- **Year**: 2024
-- **Source**: EMNLP 2024
-- **File**: `papers/2406.16264_nocha_benchmark.pdf`
-
-#### Key Contribution
-Creates a benchmark of true/false claim pairs about recently published novels, testing global reasoning over book-length texts.
-
-#### Methodology
-- **Data**: 1,001 minimal pairs about 67 novels (49K-336K tokens)
-- **Task**: Verify if a claim about the novel is true or false
-- **Design**: Minimal pairs isolate specific facts (one true, one false)
-
-#### Key Findings
-1. **All models struggle**: Best model (GPT-4o) achieves only 55.8%
-2. **No open-weight model beats random chance**
-3. **Global reasoning hardest**: 41.6% accuracy vs 59.8% for sentence-level
-4. **World-building is difficult**: Speculative fiction (complex worlds) is hardest
-
-#### Implications
-- **Character tracking in real narratives is extremely challenging**
-- **Synthetic benchmarks overestimate capabilities**
-- **World-building complexity** (multiple characters with attributes) is a key difficulty
+### 14. RULER Benchmark (Hsieh et al., 2024)
+- **Source**: COLM 2024 | arXiv:2404.06654
+- **Key Contribution**: Comprehensive long-context benchmark including Variable Tracking task (multi-hop variable assignment chains).
+- **Relevance**: Variable tracking is directly analogous to character attribute tracking.
 
 ---
 
-### Paper 5: (How) Do Language Models Track State?
-- **Authors**: Belinda Z. Li, Zifan Carl Guo, Jacob Andreas
-- **Year**: 2025
-- **Source**: ICML 2025
-- **File**: `papers/2503.02854_how_do_lms_track_state.pdf`
+## Common Methodologies
 
-#### Key Contribution
-Investigates the **mechanisms** LLMs use to track state, using permutation composition as a model task.
-
-#### Methodology
-- **Task**: Compute final order of objects after sequence of swaps
-- **Analysis**: Probing, attention analysis, intervention experiments
-- **Models**: Various transformer architectures
-
-#### Key Findings
-1. **Two mechanisms discovered**:
-   - **Associative Algorithm (AA)**: Resembles theoretical "associative scan"
-   - **Parity-Associative Algorithm (PAA)**: Uses parity heuristic + scan
-2. **Mechanism affects generalization**: AA generalizes better to longer sequences
-3. **Training dynamics predict mechanism**: Can steer toward one or other
-4. **Step-by-step simulation NOT found**: Models don't simulate state evolution layer-by-layer
-
-#### Relevance
-- **Theoretical grounding** for what mechanisms models might use for character tracking
-- **Probing methodology** applicable to studying character representations
-- **Suggests capacity limits** tied to specific algorithms, not just "memory"
-
----
-
-### Paper 6: Too Long, Didn't Model (TLDM)
-- **Authors**: Various
-- **Year**: 2025
-- **Source**: arXiv
-- **File**: `papers/2505.14925_too_long_didnt_model.pdf`
-
-#### Key Contribution
-Decomposes long-context understanding to identify where in the context window models begin to fail.
-
-#### Key Findings
-1. **State-tracking requires integration across context**
-2. **Mamba/S4 (state-space models) struggle with state tracking**
-3. **NoCha shows near-random performance** for texts averaging 127K tokens
-4. **Position-independent failures** for some models
-
----
-
-### Paper 7: CharacterBench
-- **Authors**: Jinfeng Zhou, Yongkang Huang, et al.
-- **Year**: 2024
-- **Source**: AAAI 2025
-- **File**: `papers/2412.11912_character_bench.pdf`
-
-#### Key Contribution
-Largest benchmark for evaluating character customization in role-playing LLMs, with 22,859 samples covering 3,956 characters.
-
-#### Dimensions Evaluated
-1. **Memory**: Memory consistency
-2. **Knowledge**: Fact accuracy, boundary consistency
-3. **Persona**: Attribute consistency, behavior consistency
-4. **Emotion**: Self-regulation, empathetic responsiveness
-5. **Morality**: Moral robustness, stability
-6. **Believability**: Human-likeness, engagement
-
-#### Relevance
-- **Comprehensive character attributes** to track
-- **Evaluation framework** for multi-dimensional character assessment
-- **Sparse vs. dense dimensions**: Some attributes manifest in every response, others rarely
-
----
-
-## Common Methodologies Across Papers
-
-### Synthetic Data Generation
-- **Kim & Schuster**: Box-moving with objects
-- **RULER**: Variable assignment chains
-- **bAbI**: Location/object tracking scenarios
-
-All use:
-- Controlled number of entities
-- Controlled number of state changes
-- Programmatic generation for scale
-- Clear ground truth for evaluation
-
-### Evaluation Approaches
-1. **Exact match accuracy**: Does predicted state match ground truth?
-2. **Per-entity accuracy**: Break down by specific entities
-3. **Complexity scaling**: Performance vs. number of operations/entities
-4. **Position analysis**: Performance by location in context
-
----
+1. **Synthetic controlled tasks**: Boxes task (Kim & Schuster), permutation composition (Li et al.), RULER variable tracking — precisely control entity count and operation count
+2. **Benchmark evaluation on narratives**: TLDM, CHATTER, OpenToM, NoCha — test on real/semi-real stories
+3. **Probing and mechanistic analysis**: Linear probes on hidden states, activation patching, attention pattern analysis (Li et al.)
+4. **Scaling analysis**: Vary model size, context length, number of entities/operations to find breakdown points
 
 ## Standard Baselines
 
-### For Entity Tracking
-1. **bAbI Tasks** (especially 1-3): Classic toy benchmarks
-2. **Kim & Schuster box task**: Entity tracking baseline
-3. **RULER Variable Tracking**: Multi-hop tracking
-
-### For Long-Context
-1. **Needle-in-haystack**: Simple retrieval baseline
-2. **Multi-document QA**: Realistic retrieval-reasoning
-3. **NoCha**: Book-length comprehension
-
----
+- **Random baseline**: Sample from contextually mentioned entities (Kim & Schuster)
+- **Initial state copying**: Predict no change from initial state (trivially strong when most states unchanged)
+- **Chapter-level performance**: Compare full-novel to per-chapter results (TLDM)
+- **Priors-only**: Use model's pretraining knowledge without context (CHATTER)
 
 ## Evaluation Metrics
 
-### Primary Metrics
-1. **Accuracy**: % correct state predictions
-2. **Pair Accuracy** (NoCha): Both true and false claims correct
-3. **F1 Score**: For multi-label predictions
-
-### Analysis Metrics
-1. **Accuracy vs. Number of Entities**: Scaling behavior
-2. **Accuracy vs. Position**: U-curve analysis
-3. **Accuracy vs. Number of Operations**: Complexity scaling
-4. **Per-Entity Breakdown**: Which characters are tracked well?
-
----
+- **Exact match accuracy** by number of operations (Boxes task)
+- **Semantic similarity** between full-context and short-context outputs (TLDM)
+- **Jaccard similarity** for entity set comparison (TLDM storyworlds)
+- **F1 score** for character attribute classification (CHATTER, OpenToM)
+- **Probe accuracy** at each layer for mechanistic analysis
 
 ## Datasets in the Literature
 
-| Dataset | Task | Entities | Context Length | Source |
-|---------|------|----------|----------------|--------|
-| bAbI | QA | 2-5 | Short | Facebook |
-| Kim & Schuster | State prediction | 7 boxes | Short | Authors |
-| RULER VT | Variable tracking | 2-10 chains | 4K-128K | NVIDIA |
-| NoCha | Claim verification | Novel characters | 49K-336K | Authors |
-| NarrativeQA | QA | Multiple | Full novels | DeepMind |
+| Dataset | Task | Entities | Scale | Used In |
+|---------|------|----------|-------|---------|
+| Boxes | Object tracking across moves | 7 boxes, ~20 objects | 90K examples | Kim & Schuster 2023, 2024 |
+| Permutation sequences | State composition | 3-5 elements | 1M sequences | Li et al. 2025 |
+| OpenToM | Character belief tracking | 2-3 characters | 16K questions | Xu et al. 2024 |
+| TLDM (40 novels) | Character location tracking | Full cast | 40 novels | Hamilton et al. 2025 |
+| CHATTER | Character-trope attribution | 2,998 characters | 88K pairs | Baruah & Narayanan 2025 |
+| ProPara | Process entity states | 2-5 entities | 445 paragraphs | Dalvi et al. 2019 |
+| NarrativeQA | Narrative comprehension | Variable | 33K QA pairs | Kočiský et al. 2018 |
+| SimpleToM | Theory of mind | 2 characters | 1,147 stories | allenai |
+| Andersen/Persuasion | Character locations | ~5-15 per story | 16 texts | 2025 |
+| RULER VT | Variable tracking | 2-10 chains | Configurable | Hsieh et al. 2024 |
+| NoCha | Claim verification | Novel characters | 1,001 pairs | Karpinska et al. 2024 |
+| FLAWEDFICTIONS | Plot hole detection | Variable | Configurable | 2025 |
 
 ---
 
 ## Gaps and Opportunities
 
-### Gap 1: Systematic Character Count Studies
-**No existing work systematically varies the number of characters** to find breaking points.
-- Kim & Schuster use fixed 7 boxes
-- RULER uses fixed chain patterns
-- Our research can fill this gap
-
-### Gap 2: Natural Language Character Tracking
-Most studies use synthetic tasks with simple templates.
-- Real stories have complex, naturalistic language
-- Character references may be indirect (pronouns, descriptions)
-- Our research can bridge synthetic and naturalistic
-
-### Gap 3: Multi-Attribute Tracking
-Existing work focuses on single attributes (location OR object).
-- Characters have multiple simultaneous attributes
-- Need to track location + mood + possessions + relationships
-- Our synthetic dataset includes multi-attribute tracking
-
-### Gap 4: Mechanistic Understanding
-Li et al. (2025) analyze permutation tracking, but:
-- Character tracking may use different mechanisms
-- Need to study attention patterns over character mentions
-- Probing for character-specific representations
+1. **No systematic character count scaling study**: No paper systematically varies the number of characters (e.g., 2, 4, 8, 16, 32) while holding story length constant. Kim & Schuster fix at 7 boxes; RULER uses fixed chain patterns.
+2. **Synthetic vs. natural gap**: Boxes task is controlled but unrealistic; novel benchmarks are realistic but uncontrolled. A middle ground (synthetic stories with controllable character count) is needed.
+3. **Character attributes vs. character count**: Most work tracks one attribute per entity. How many distinct attributes per character can be tracked simultaneously?
+4. **Modern model evaluation**: Kim & Schuster (2023) tested GPT-3.5; need evaluation of Claude, GPT-4, Gemini, Llama 3, etc.
+5. **Confusion vs. forgetting**: When models fail, do they confuse characters (swap attributes) or lose information entirely? This distinction has experimental implications.
+6. **Interaction between character count and context length**: More characters means longer text — these effects need disentangling.
 
 ---
 
 ## Recommendations for Our Experiment
 
+### Recommended Approach
+Design a controlled experiment that systematically varies the number of characters in a story while testing the model's ability to track per-character attributes. Use synthetic story generation to control:
+- Number of characters (2, 4, 8, 16, 32, 64)
+- Number of attributes per character (name, location, possession, relationship)
+- Number of state changes per character
+- Total story length
+
 ### Recommended Datasets
-1. **Primary**: Our synthetic character tracking dataset (varying 2-20 characters)
-2. **Baseline**: bAbI Task 2 (two supporting facts) for sanity check
-3. **Reference**: RULER Variable Tracking for comparison
+1. **Primary**: Generate synthetic stories extending the Boxes paradigm to character narratives (use entity-tracking-lms code as starting point)
+2. **Validation**: OpenToM (multi-character belief tracking) and ProPara (entity state tracking)
+3. **Real-world validation**: TLDM-style evaluation on novels (optional, for ecological validity)
 
 ### Recommended Baselines
-1. **Random**: Always predict most common state
-2. **First-mention**: Predict initial state (ignores changes)
-3. **Last-mention**: Predict based on most recent mention only
-4. **Full-context**: Proper model inference
+- Random guessing from mentioned entities
+- Initial state copying (predict no change)
+- Most-recent-mention heuristic
+- Compare across model families and sizes (including code-pretrained variants)
 
 ### Recommended Metrics
-1. **Overall accuracy** by number of characters
-2. **Per-character accuracy** (do early/late characters differ?)
-3. **Per-question-type accuracy** (location vs. mood vs. holding)
-4. **Position analysis** (characters introduced early vs. late)
+- Exact match accuracy by character count and operation count
+- Per-character accuracy (does the model confuse Character A's attributes with Character B's?)
+- Confusion matrix between characters (are nearby characters more confused?)
+- Degradation curve: accuracy as a function of character count
 
 ### Methodological Considerations
-1. **Control for token count**: More characters = longer context
-2. **Control for mentions**: Ensure each character mentioned similar times
-3. **Use multiple seeds**: 3+ trials per configuration
-4. **Test multiple models**: GPT-4, Claude, Llama, etc.
-
----
-
-## Theoretical Framework
-
-Based on the literature, we hypothesize:
-
-1. **Capacity Limit Exists**: Models have a finite number of entity "slots"
-2. **Mechanism-Dependent**: The tracking algorithm determines the limit
-3. **Position Effects**: Middle characters may be tracked worse
-4. **Code Pretraining Helps**: Computational abstraction improves tracking
-5. **Complexity Matters**: More state changes = harder tracking
-
-The experiment should test each of these hypotheses.
-
----
-
-## Key References
-
-1. Kim, N., & Schuster, S. (2023). Entity Tracking in Language Models. ACL.
-2. Liu, N. F., et al. (2024). Lost in the Middle. TACL.
-3. Hsieh, C.-P., et al. (2024). RULER. COLM.
-4. Karpinska, M., et al. (2024). NoCha. EMNLP.
-5. Li, B. Z., et al. (2025). How Do Language Models Track State? ICML.
-6. Weston, J., et al. (2015). Towards AI-complete QA: bAbI tasks. arXiv.
+- **Control for context length**: More characters = longer text — disentangle character count from length effects
+- **Code-pretrained models**: Literature strongly suggests these will perform best
+- **Attribute type matters**: Location tracking (concrete) may be easier than belief/intention tracking (abstract)
+- **Synthetic stories should be natural-sounding**: Use templates that read like actual narratives, not procedural instructions
+- **Position effects**: Characters introduced mid-story may be tracked worse (Lost in the Middle)
+- **Test both state-changed and unchanged entities**: Many benchmarks are inflated by trivial "no change" cases (Kim & Schuster's key insight)

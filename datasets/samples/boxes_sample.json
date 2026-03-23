@@ -1,0 +1,37 @@
+[
+  {
+    "sentence": "Box 0 contains the machine and the paper and the ticket, Box 1 contains the leaf and the stone and the wire, Box 2 contains the coat, Box 3 contains the brain, Box 4 contains the brick and the cake and the glass, Box 5 contains the chemical, Box 6 is empty. Box 0 contains the machine and the paper and the ticket.",
+    "sentence_masked": "Box 0 contains the machine and the paper and the ticket, Box 1 contains the leaf and the stone and the wire, Box 2 contains the coat, Box 3 contains the brain, Box 4 contains the brick and the cake and the glass, Box 5 contains the chemical, Box 6 is empty. Box 0 <extra_id_0> .",
+    "masked_content": "<extra_id_0> contains the machine and the paper and the ticket",
+    "sample_id": 0,
+    "numops": 0
+  },
+  {
+    "sentence": "Box 0 contains the machine and the paper and the ticket, Box 1 contains the leaf and the stone and the wire, Box 2 contains the coat, Box 3 contains the brain, Box 4 contains the brick and the cake and the glass, Box 5 contains the chemical, Box 6 is empty. Box 1 contains the leaf and the stone and the wire.",
+    "sentence_masked": "Box 0 contains the machine and the paper and the ticket, Box 1 contains the leaf and the stone and the wire, Box 2 contains the coat, Box 3 contains the brain, Box 4 contains the brick and the cake and the glass, Box 5 contains the chemical, Box 6 is empty. Box 1 <extra_id_0> .",
+    "masked_content": "<extra_id_0> contains the leaf and the stone and the wire",
+    "sample_id": 0,
+    "numops": 0
+  },
+  {
+    "sentence": "Box 0 contains the machine and the paper and the ticket, Box 1 contains the leaf and the stone and the wire, Box 2 contains the coat, Box 3 contains the brain, Box 4 contains the brick and the cake and the glass, Box 5 contains the chemical, Box 6 is empty. Box 2 contains the coat.",
+    "sentence_masked": "Box 0 contains the machine and the paper and the ticket, Box 1 contains the leaf and the stone and the wire, Box 2 contains the coat, Box 3 contains the brain, Box 4 contains the brick and the cake and the glass, Box 5 contains the chemical, Box 6 is empty. Box 2 <extra_id_0> .",
+    "masked_content": "<extra_id_0> contains the coat",
+    "sample_id": 0,
+    "numops": 0
+  },
+  {
+    "sentence": "Box 0 contains the machine and the paper and the ticket, Box 1 contains the leaf and the stone and the wire, Box 2 contains the coat, Box 3 contains the brain, Box 4 contains the brick and the cake and the glass, Box 5 contains the chemical, Box 6 is empty. Box 3 contains the brain.",
+    "sentence_masked": "Box 0 contains the machine and the paper and the ticket, Box 1 contains the leaf and the stone and the wire, Box 2 contains the coat, Box 3 contains the brain, Box 4 contains the brick and the cake and the glass, Box 5 contains the chemical, Box 6 is empty. Box 3 <extra_id_0> .",
+    "masked_content": "<extra_id_0> contains the brain",
+    "sample_id": 0,
+    "numops": 0
+  },
+  {
+    "sentence": "Box 0 contains the machine and the paper and the ticket, Box 1 contains the leaf and the stone and the wire, Box 2 contains the coat, Box 3 contains the brain, Box 4 contains the brick and the cake and the glass, Box 5 contains the chemical, Box 6 is empty. Box 4 contains the brick and the cake and the glass.",
+    "sentence_masked": "Box 0 contains the machine and the paper and the ticket, Box 1 contains the leaf and the stone and the wire, Box 2 contains the coat, Box 3 contains the brain, Box 4 contains the brick and the cake and the glass, Box 5 contains the chemical, Box 6 is empty. Box 4 <extra_id_0> .",
+    "masked_content": "<extra_id_0> contains the brick and the cake and the glass",
+    "sample_id": 0,
+    "numops": 0
+  }
+]

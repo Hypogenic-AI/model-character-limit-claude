@@ -1,0 +1,31 @@
+\section{Related Work}
+\label{sec:related}
+
+\para{Entity tracking benchmarks.}
+\citet{kim2023entity} introduced the \boxes benchmark, a synthetic task requiring models to track objects across 7~boxes after a series of move operations.
+They showed that earlier claims of entity tracking ability were inflated by trivial baselines, and that code-pretrained models substantially outperformed standard language models.
+\citet{kim2024code} extended this analysis, confirming that code pretraining causally improves entity tracking: Code Llama 70B-Instruct achieved 64.9\% accuracy on non-trivial \boxes examples, the best result among open-weight models at the time.
+Both studies fix the number of entities at~7 and vary the number of operations, leaving the question of how performance scales with entity \emph{count} unanswered.
+The \ruler benchmark~\citep{hsieh2024ruler} includes a variable-tracking task analogous to entity tracking but uses chain-style assignments rather than narrative framing and does not systematically explore high entity counts.
+
+\para{Narrative understanding and character tracking.}
+\citet{hamilton2025tldm} evaluated frontier models on full novels, finding that all models lose stable narrative understanding beyond 64K tokens, with character-location tracking (``storyworld description'') degrading fastest among their three tasks.
+However, because real novels confound character count with text length, discourse complexity, and coreference difficulty, it is hard to isolate the effect of character count per se.
+\citet{baruah2025chatter} built the largest character-attribution dataset (88K character-trope pairs from 660~movies) and found that full-script context actually \emph{decreased} performance for most models relative to priors alone---evidence that models struggle to aggregate distributed character information across long contexts.
+Other recent work has tested character-location tracking in fairy tales and novels~\citep{locations2025}, plot-hole detection requiring character-state consistency~\citep{flawed2025}, and character-trait coherence in generated narratives~\citep{mary2025}.
+These studies consistently find that models struggle with character tracking in naturalistic settings, but none isolates the number of characters as an independent variable.
+
+\para{Theory of mind and mental state tracking.}
+\citet{xu2024opentom} introduced \opentom, a theory-of-mind benchmark with 696~narratives and 16K~questions testing both physical and psychological state tracking for multiple characters.
+\citet{evolvtrip2025} proposed augmenting LLMs with external temporal knowledge graphs to compensate for failures in tracking evolving character mental states.
+These works focus on the \emph{complexity} of tracked states (beliefs, intentions) rather than the \emph{number} of entities tracked, complementing our focus on scaling.
+
+\para{Mechanistic interpretability of state tracking.}
+\citet{li2025state} used probing and activation patching on the permutation-composition task to identify two algorithms transformers learn for state tracking: an Associative Algorithm (AA) that performs a hierarchical parallel scan, and a Parity-Associative Algorithm (PAA) that first computes parity, then applies associative operations.
+They found that code-pretrained models preferentially learn AA, which generalizes better to longer sequences.
+Their work provides a mechanistic basis for interpreting our behavioral findings: the confusion errors we observe are consistent with the overlapping distributed representations characteristic of associative state tracking.
+
+\para{Positioning our work.}
+Our study bridges the gap between controlled synthetic benchmarks~\citep{kim2023entity,hsieh2024ruler} and naturalistic evaluations~\citep{hamilton2025tldm,baruah2025chatter}.
+We retain the experimental control of synthetic tasks while framing the task as narrative character tracking, and we are the first to systematically vary the number of tracked entities from 2 to 64.
+Our error taxonomy (confusion vs.\ forgetting) connects behavioral measurements to mechanistic hypotheses about transformer state tracking~\citep{li2025state}.

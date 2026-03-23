@@ -1,0 +1,218 @@
+[
+  {
+    "document_id": "0025577043f5090cd603c6aea60f26e236195594",
+    "document_kind": "movie",
+    "question": {
+      "text": "Who is Mark Hunter?",
+      "tokens": [
+        "Who",
+        "is",
+        "Mark",
+        "Hunter",
+        "?"
+      ]
+    },
+    "answers": [
+      {
+        "text": "He is a high school student in Phoenix.",
+        "tokens": [
+          "He",
+          "is",
+          "a",
+          "high",
+          "school",
+          "student",
+          "in",
+          "Phoenix",
+          "."
+        ]
+      },
+      {
+        "text": "A loner and outsider student with a radio station.",
+        "tokens": [
+          "A",
+          "loner",
+          "and",
+          "outsider",
+          "student",
+          "with",
+          "a",
+          "radio",
+          "station",
+          "."
+        ]
+      }
+    ]
+  },
+  {
+    "document_id": "0025577043f5090cd603c6aea60f26e236195594",
+    "document_kind": "movie",
+    "question": {
+      "text": "Where does this radio station take place?",
+      "tokens": [
+        "Where",
+        "does",
+        "this",
+        "radio",
+        "station",
+        "take",
+        "place",
+        "?"
+      ]
+    },
+    "answers": [
+      {
+        "text": "It takes place in Mark's parents basement. ",
+        "tokens": [
+          "It",
+          "takes",
+          "place",
+          "in",
+          "Mark",
+          "s",
+          "parents",
+          "basement",
+          "."
+        ]
+      },
+      {
+        "text": "Phoenix, Arizona",
+        "tokens": [
+          "Phoenix",
+          ",",
+          "Arizona"
+        ]
+      }
+    ]
+  },
+  {
+    "document_id": "0025577043f5090cd603c6aea60f26e236195594",
+    "document_kind": "movie",
+    "question": {
+      "text": "Why do more students tune into Mark's show?",
+      "tokens": [
+        "Why",
+        "do",
+        "more",
+        "students",
+        "tune",
+        "into",
+        "Mark",
+        "s",
+        "show",
+        "?"
+      ]
+    },
+    "answers": [
+      {
+        "text": "Mark talks about what goes on at school and in the community.",
+        "tokens": [
+          "Mark",
+          "talks",
+          "about",
+          "what",
+          "goes",
+          "on",
+          "at",
+          "school",
+          "and",
+          "in",
+          "the",
+          "community",
+          "."
+        ]
+      },
+      {
+        "text": "Because he has a thing to say about what is happening at his school and the community.",
+        "tokens": [
+          "Because",
+          "he",
+          "has",
+          "a",
+          "thing",
+          "to",
+          "say",
+          "about",
+          "what",
+          "is",
+          "happening",
+          "at",
+          "his",
+          "school",
+          "and",
+          "the",
+          "community",
+          "."
+        ]
+      }
+    ]
+  },
+  {
+    "document_id": "0025577043f5090cd603c6aea60f26e236195594",
+    "document_kind": "movie",
+    "question": {
+      "text": "Who commits suicide?",
+      "tokens": [
+        "Who",
+        "commits",
+        "suicide",
+        "?"
+      ]
+    },
+    "answers": [
+      {
+        "text": "Malcolm.",
+        "tokens": [
+          "Malcolm",
+          "."
+        ]
+      },
+      {
+        "text": "Malcolm.",
+        "tokens": [
+          "Malcolm",
+          "."
+        ]
+      }
+    ]
+  },
+  {
+    "document_id": "0025577043f5090cd603c6aea60f26e236195594",
+    "document_kind": "movie",
+    "question": {
+      "text": "What does Paige jam into her microwave?",
+      "tokens": [
+        "What",
+        "does",
+        "Paige",
+        "jam",
+        "into",
+        "her",
+        "microwave",
+        "?"
+      ]
+    },
+    "answers": [
+      {
+        "text": "She jams her medals and accolades. ",
+        "tokens": [
+          "She",
+          "jams",
+          "her",
+          "medals",
+          "and",
+          "accolades",
+          "."
+        ]
+      },
+      {
+        "text": "Her award medals",
+        "tokens": [
+          "Her",
+          "award",
+          "medals"
+        ]
+      }
+    ]
+  }
+]

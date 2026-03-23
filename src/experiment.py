@@ -1,387 +1,355 @@
 """
 Character Tracking Experiment
-Tests how many characters LLMs can track in synthetic narratives.
+Tests how many characters frontier LLMs can track in synthetic narratives.
+Uses batch JSON queries for efficiency and detailed error analysis.
 """
 
-import json
 import os
+import json
 import time
 import random
-from pathlib import Path
-from typing import Optional
-from dataclasses import dataclass, field
-from collections import defaultdict
+import sys
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 from openai import OpenAI
-import httpx
 
-# Set random seed for reproducibility
+# Ensure we can import from src/
+sys.path.insert(0, os.path.dirname(__file__))
+from story_generator import generate_dataset, StoryInstance
+
+# Reproducibility
 random.seed(42)
 np.random.seed(42)
 
-# Configuration
-@dataclass
-class Config:
-    """Experiment configuration."""
-    dataset_path: str = "datasets/character_tracking_synthetic.json"
-    results_dir: str = "results"
-    temperature: float = 0.0
-    max_tokens: int = 50
-    timeout: float = 60.0
-    retry_attempts: int = 3
-    retry_delay: float = 2.0
-
-config = Config()
-
-# Prompt template
-PROMPT_TEMPLATE = """Read the following story and answer the question based on the final state of affairs.
-
-Story:
-{story}
-
-Question: {question}
-
-Answer with ONLY the answer word (e.g., "kitchen", "happy", "book", or "nothing"). Do not include any explanation."""
+RESULTS_DIR = "/workspaces/model-character-limit-claude/results"
+os.makedirs(RESULTS_DIR, exist_ok=True)
+os.makedirs(f"{RESULTS_DIR}/plots", exist_ok=True)
 
 
-def load_dataset(path: str) -> dict:
-    """Load the synthetic character tracking dataset."""
-    with open(path) as f:
-        data = json.load(f)
-    print(f"Loaded {len(data['examples'])} examples")
-    return data
+def build_prompt(story: StoryInstance) -> tuple[str, str]:
+    """Build prompt asking about ALL characters at once via JSON."""
+    system_msg = (
+        "You are a careful reader. Read the story and answer questions about "
+        "each character's current state at the END of the story. "
+        "Respond ONLY with a JSON object, no explanation."
+    )
+
+    # Build expected JSON template
+    template = {}
+    for cs in story.characters:
+        template[cs["name"]] = {"location": "...", "possession": "..."}
+
+    user_msg = f"""Read the following story carefully, then answer what each character's final location and possession is.
+
+STORY:
+{story.story_text}
+
+Answer in this exact JSON format (replace "..." with the actual answers):
+{json.dumps(template, indent=2)}
+
+Important: Track all state changes through the story. Give the FINAL state for each character.
+Respond with ONLY the JSON object."""
+
+    return system_msg, user_msg
 
 
-class OpenAIClient:
-    """OpenAI API client with retry logic."""
+def call_api(client: OpenAI, model: str, system_msg: str, user_msg: str,
+             temperature: float = 0, max_tokens: int = 4096) -> str:
+    """Call OpenAI-compatible API with retry."""
+    for attempt in range(5):
+        try:
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system_msg},
+                    {"role": "user", "content": user_msg},
+                ],
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            if attempt < 4:
+                wait = 2 ** attempt
+                print(f"  API error ({e}), retrying in {wait}s...")
+                time.sleep(wait)
+            else:
+                print(f"  API failed after 5 attempts: {e}")
+                return ""
 
-    def __init__(self, model: str = "gpt-4.1"):
-        self.client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-        self.model = model
 
-    def query(self, story: str, question: str) -> str:
-        """Query the model with a story and question."""
-        prompt = PROMPT_TEMPLATE.format(story=story, question=question)
+def parse_response(response: str, character_names: list[str]) -> dict:
+    """Parse JSON response into character -> {location, possession} dict."""
+    text = response.strip()
+    if "```json" in text:
+        text = text.split("```json")[1].split("```")[0].strip()
+    elif "```" in text:
+        text = text.split("```")[1].split("```")[0].strip()
 
-        for attempt in range(config.retry_attempts):
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        start = text.find("{")
+        end = text.rfind("}") + 1
+        if start >= 0 and end > start:
             try:
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[
-                        {"role": "user", "content": prompt}
-                    ],
-                    temperature=config.temperature,
-                    max_tokens=config.max_tokens,
-                )
-                return response.choices[0].message.content.strip().lower()
-            except Exception as e:
-                if attempt < config.retry_attempts - 1:
-                    time.sleep(config.retry_delay * (attempt + 1))
-                else:
-                    print(f"Error after {config.retry_attempts} attempts: {e}")
-                    return "[ERROR]"
-        return "[ERROR]"
+                parsed = json.loads(text[start:end])
+            except json.JSONDecodeError:
+                return {}
+        else:
+            return {}
+
+    result = {}
+    for name in character_names:
+        if name in parsed and isinstance(parsed[name], dict):
+            result[name] = {
+                "location": str(parsed[name].get("location", "")),
+                "possession": str(parsed[name].get("possession", "")),
+            }
+    return result
 
 
-class OpenRouterClient:
-    """OpenRouter API client for Claude models."""
-
-    def __init__(self, model: str = "anthropic/claude-sonnet-4"):
-        self.api_key = os.environ.get("OPENROUTER_API_KEY")
-        self.model = model
-        self.base_url = "https://openrouter.ai/api/v1/chat/completions"
-
-    def query(self, story: str, question: str) -> str:
-        """Query the model with a story and question."""
-        prompt = PROMPT_TEMPLATE.format(story=story, question=question)
-
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
-
-        payload = {
-            "model": self.model,
-            "messages": [
-                {"role": "user", "content": prompt}
-            ],
-            "temperature": config.temperature,
-            "max_tokens": config.max_tokens,
-        }
-
-        for attempt in range(config.retry_attempts):
-            try:
-                with httpx.Client(timeout=config.timeout) as client:
-                    response = client.post(self.base_url, headers=headers, json=payload)
-                    response.raise_for_status()
-                    data = response.json()
-                    return data["choices"][0]["message"]["content"].strip().lower()
-            except Exception as e:
-                if attempt < config.retry_attempts - 1:
-                    time.sleep(config.retry_delay * (attempt + 1))
-                else:
-                    print(f"Error after {config.retry_attempts} attempts: {e}")
-                    return "[ERROR]"
-        return "[ERROR]"
+def normalize(answer: str) -> str:
+    """Normalize answer for comparison."""
+    a = answer.lower().strip().rstrip(".")
+    for prefix in ["a ", "an ", "the "]:
+        if a.startswith(prefix):
+            a = a[len(prefix):]
+    return a.strip()
 
 
-def normalize_answer(answer: str) -> str:
-    """Normalize an answer for comparison."""
-    answer = answer.lower().strip()
-    # Remove punctuation and extra whitespace
-    answer = answer.replace(".", "").replace(",", "").strip()
-    # Handle common variations
-    if answer in ["none", "nothing", "no object", "no item", "null"]:
-        return "nothing"
-    # Extract single word answers if model gives explanation
-    words = answer.split()
-    if len(words) > 0:
-        # Return first word for simple answers
-        return words[0]
-    return answer
-
-
-def evaluate_answer(predicted: str, expected: str) -> bool:
-    """Check if predicted answer matches expected."""
-    pred_norm = normalize_answer(predicted)
-    exp_norm = normalize_answer(expected)
-    return pred_norm == exp_norm
-
-
-def run_experiment(client, data: dict, model_name: str) -> pd.DataFrame:
-    """Run the experiment for a given model."""
+def evaluate_story(story: StoryInstance, model_answers: dict) -> list[dict]:
+    """Evaluate model answers against ground truth with error analysis."""
     results = []
+    for q, gt in zip(story.questions, story.ground_truth):
+        char_name = q["character"]
+        attribute = q["attribute"]
+        correct_answer = gt["answer"]
 
-    print(f"\nRunning experiment with {model_name}...")
+        model_ans = ""
+        if char_name in model_answers:
+            model_ans = model_answers[char_name].get(attribute, "")
 
-    for example in tqdm(data["examples"], desc=model_name):
-        story = example["story"]
-        num_characters = example["num_characters"]
-        num_actions = example["num_actions"]
+        is_correct = normalize(model_ans) == normalize(correct_answer)
 
-        for q in example["questions"]:
-            question = q["question"]
-            expected = q["answer"]
-            q_type = q["type"]
-
-            # Query the model
-            predicted = client.query(story, question)
-            correct = evaluate_answer(predicted, expected)
-
-            results.append({
-                "model": model_name,
-                "num_characters": num_characters,
-                "num_actions": num_actions,
-                "question_type": q_type,
-                "question": question,
-                "expected": expected,
-                "predicted": predicted,
-                "correct": correct,
-                "story_len": len(story),
-            })
-
-            # Small delay to avoid rate limits
-            time.sleep(0.1)
-
-    return pd.DataFrame(results)
-
-
-def compute_baselines(data: dict) -> pd.DataFrame:
-    """Compute baseline accuracy metrics."""
-    results = []
-
-    # Collect all valid answers for random baseline
-    all_locations = set()
-    all_moods = set()
-    all_holdings = set()
-
-    for example in data["examples"]:
-        for char, state in example["final_states"].items():
-            all_locations.add(state["location"])
-            all_moods.add(state["mood"])
-            if state["holding"]:
-                all_holdings.add(state["holding"])
-    all_holdings.add("nothing")
-
-    all_locations = list(all_locations)
-    all_moods = list(all_moods)
-    all_holdings = list(all_holdings)
-
-    for example in data["examples"]:
-        num_characters = example["num_characters"]
-        num_actions = example["num_actions"]
-
-        # Parse initial states from first sentences
-        initial_states = {}
-        for char in example["characters"]:
-            # Find first sentence about this character
-            for sent in example["sentences"]:
-                if sent.startswith(char):
-                    # Parse initial location and mood
-                    # Format: "Alice is in the kitchen and feels happy."
-                    parts = sent.split(" is in the ")
-                    if len(parts) == 2:
-                        loc_mood = parts[1]
-                        loc = loc_mood.split(" and feels ")[0]
-                        mood = loc_mood.split(" and feels ")[1].replace(".", "")
-                        initial_states[char] = {
-                            "location": loc,
-                            "mood": mood,
-                            "holding": "nothing"
-                        }
+        # Error analysis
+        error_type = None
+        confused_with = None
+        if not is_correct and model_ans:
+            # Check forgetting (reverted to initial state)
+            for init in story.initial_states:
+                if init["name"] == char_name:
+                    if normalize(model_ans) == normalize(init.get(attribute, "")):
+                        error_type = "forgetting"
                     break
 
-        for q in example["questions"]:
-            question = q["question"]
-            expected = q["answer"]
-            q_type = q["type"]
+            # Check confusion (answer belongs to another character)
+            if error_type is None:
+                for cs in story.characters:
+                    if cs["name"] != char_name:
+                        if normalize(model_ans) == normalize(cs.get(attribute, "")):
+                            error_type = "confusion"
+                            confused_with = cs["name"]
+                            break
+                # Also check initial states of other characters
+                if error_type is None:
+                    for init in story.initial_states:
+                        if init["name"] != char_name:
+                            if normalize(model_ans) == normalize(init.get(attribute, "")):
+                                error_type = "confusion"
+                                confused_with = init["name"]
+                                break
 
-            # Extract character from question
-            char = question.replace("Where is ", "").replace("How does ", "").replace(" feel?", "").replace("What is ", "").replace(" holding?", "").replace("?", "")
+            if error_type is None:
+                error_type = "other"
+        elif not is_correct and not model_ans:
+            error_type = "missing"
+
+        # Get intro order
+        intro_order = None
+        for cs in story.characters:
+            if cs["name"] == char_name:
+                intro_order = cs["introduction_order"]
+                break
+
+        results.append({
+            "character": char_name,
+            "attribute": attribute,
+            "correct_answer": correct_answer,
+            "model_answer": model_ans,
+            "is_correct": is_correct,
+            "error_type": error_type,
+            "confused_with": confused_with,
+            "introduction_order": intro_order,
+            "num_characters": story.num_characters,
+        })
+
+    return results
+
+
+def run_experiment(
+    models: dict,
+    character_counts: list[int] = [2, 4, 8, 16, 32],
+    stories_per_count: int = 5,
+    state_changes: int = 2,
+):
+    """Run the full experiment."""
+    print("Generating dataset...")
+    dataset = generate_dataset(
+        character_counts=character_counts,
+        stories_per_count=stories_per_count,
+        state_changes_per_char=state_changes,
+    )
+    print(f"Generated {len(dataset)} stories ({sum(len(s.questions) for s in dataset)} total questions)")
+
+    # Save dataset for reproducibility
+    dataset_records = []
+    for story in dataset:
+        dataset_records.append({
+            "num_characters": story.num_characters,
+            "story_text": story.story_text,
+            "characters": story.characters,
+            "initial_states": story.initial_states,
+            "questions": story.questions,
+            "ground_truth": story.ground_truth,
+            "events": story.events,
+        })
+    with open(f"{RESULTS_DIR}/dataset.json", "w") as f:
+        json.dump(dataset_records, f, indent=2)
+
+    all_results = {}
+
+    for model_name, model_config in models.items():
+        print(f"\n{'='*60}")
+        print(f"Model: {model_name}")
+        print(f"{'='*60}")
+
+        client = model_config["client"]
+        model_id = model_config["model_id"]
+        results = []
+
+        for story in tqdm(dataset, desc=f"{model_name}"):
+            system_msg, user_msg = build_prompt(story)
+            response = call_api(client, model_id, system_msg, user_msg)
+
+            char_names = [cs["name"] for cs in story.characters]
+            model_answers = parse_response(response, char_names)
+
+            story_results = evaluate_story(story, model_answers)
+            for r in story_results:
+                r["model"] = model_name
+                r["raw_response_preview"] = response[:300]
+            results.extend(story_results)
+
+        all_results[model_name] = results
+        with open(f"{RESULTS_DIR}/results_{model_name}.json", "w") as f:
+            json.dump(results, f, indent=2)
+
+        # Print summary
+        correct = sum(1 for r in results if r["is_correct"])
+        total = len(results)
+        print(f"  Overall: {correct}/{total} = {correct/total:.1%}")
+        for nc in character_counts:
+            nc_res = [r for r in results if r["num_characters"] == nc]
+            nc_ok = sum(1 for r in nc_res if r["is_correct"])
+            print(f"  {nc:2d} chars: {nc_ok}/{len(nc_res)} = {nc_ok/len(nc_res):.1%}")
+
+    # Save combined
+    combined = []
+    for results in all_results.values():
+        combined.extend(results)
+    with open(f"{RESULTS_DIR}/all_results.json", "w") as f:
+        json.dump(combined, f, indent=2)
+
+    # Compute baselines
+    baselines = compute_baselines(dataset)
+    with open(f"{RESULTS_DIR}/baselines.json", "w") as f:
+        json.dump(baselines, f, indent=2)
+    print(f"\nBaselines - Random: {baselines['random']:.1%}, Initial-state: {baselines['initial_state']:.1%}")
+
+    # Save config
+    config = {
+        "character_counts": character_counts,
+        "stories_per_count": stories_per_count,
+        "state_changes_per_char": state_changes,
+        "models": list(models.keys()),
+        "timestamp": datetime.now().isoformat(),
+        "seed": 42,
+    }
+    with open(f"{RESULTS_DIR}/config.json", "w") as f:
+        json.dump(config, f, indent=2)
+
+    return all_results, dataset
+
+
+def compute_baselines(dataset: list[StoryInstance]) -> dict:
+    """Compute random and initial-state baseline accuracy."""
+    rng = random.Random(42)
+    random_correct = 0
+    initial_correct = 0
+    total = 0
+
+    for story in dataset:
+        all_locs = list(set(cs["location"] for cs in story.characters))
+        all_items = list(set(cs["possession"] for cs in story.characters))
+
+        for q, gt in zip(story.questions, story.ground_truth):
+            total += 1
+            attr = q["attribute"]
 
             # Random baseline
-            if q_type == "location":
-                random_pred = random.choice(all_locations)
-            elif q_type == "mood":
-                random_pred = random.choice(all_moods)
+            if attr == "location":
+                if rng.choice(all_locs) == gt["answer"]:
+                    random_correct += 1
             else:
-                random_pred = random.choice(all_holdings)
+                if rng.choice(all_items) == gt["answer"]:
+                    random_correct += 1
 
-            # First-state baseline
-            first_state_pred = "unknown"
-            if char in initial_states:
-                if q_type == "location":
-                    first_state_pred = initial_states[char]["location"]
-                elif q_type == "mood":
-                    first_state_pred = initial_states[char]["mood"]
-                else:
-                    first_state_pred = initial_states[char]["holding"]
+            # Initial state baseline
+            for init in story.initial_states:
+                if init["name"] == q["character"]:
+                    if normalize(init.get(attr, "")) == normalize(gt["answer"]):
+                        initial_correct += 1
+                    break
 
-            results.append({
-                "model": "random_baseline",
-                "num_characters": num_characters,
-                "num_actions": num_actions,
-                "question_type": q_type,
-                "expected": expected,
-                "predicted": random_pred,
-                "correct": random_pred == expected,
-            })
-
-            results.append({
-                "model": "first_state_baseline",
-                "num_characters": num_characters,
-                "num_actions": num_actions,
-                "question_type": q_type,
-                "expected": expected,
-                "predicted": first_state_pred,
-                "correct": first_state_pred == expected,
-            })
-
-    return pd.DataFrame(results)
-
-
-def analyze_results(df: pd.DataFrame) -> dict:
-    """Analyze experiment results."""
-    analysis = {}
-
-    # Overall accuracy by model
-    analysis["overall_accuracy"] = df.groupby("model")["correct"].mean().to_dict()
-
-    # Accuracy by character count and model
-    char_acc = df.groupby(["model", "num_characters"])["correct"].mean().unstack(level=0)
-    analysis["accuracy_by_characters"] = char_acc.to_dict()
-
-    # Accuracy by question type and model
-    type_acc = df.groupby(["model", "question_type"])["correct"].mean().unstack(level=0)
-    analysis["accuracy_by_question_type"] = type_acc.to_dict()
-
-    # Accuracy by action count and model
-    action_acc = df.groupby(["model", "num_actions"])["correct"].mean().unstack(level=0)
-    analysis["accuracy_by_actions"] = action_acc.to_dict()
-
-    return analysis
-
-
-def save_results(df: pd.DataFrame, analysis: dict, results_dir: str = "results"):
-    """Save results to files."""
-    os.makedirs(results_dir, exist_ok=True)
-
-    # Save raw results
-    df.to_csv(f"{results_dir}/raw_results.csv", index=False)
-
-    # Save analysis
-    with open(f"{results_dir}/analysis.json", "w") as f:
-        # Convert any numpy types to Python types
-        def convert(obj):
-            if isinstance(obj, np.floating):
-                return float(obj)
-            elif isinstance(obj, np.integer):
-                return int(obj)
-            elif isinstance(obj, np.ndarray):
-                return obj.tolist()
-            elif isinstance(obj, dict):
-                return {k: convert(v) for k, v in obj.items()}
-            return obj
-        json.dump(convert(analysis), f, indent=2)
-
-    print(f"\nResults saved to {results_dir}/")
-
-
-def main():
-    """Main experiment runner."""
-    print("="*60)
-    print("Character Tracking Experiment")
-    print("="*60)
-
-    # Load data
-    data = load_dataset(config.dataset_path)
-
-    # Initialize clients
-    models = {
-        "gpt-4.1": OpenAIClient("gpt-4.1"),
-        "gpt-3.5-turbo": OpenAIClient("gpt-3.5-turbo"),
-        # "claude-sonnet-4": OpenRouterClient("anthropic/claude-sonnet-4"),
+    return {
+        "random": random_correct / total if total > 0 else 0,
+        "initial_state": initial_correct / total if total > 0 else 0,
+        "total_questions": total,
     }
-
-    # Run experiments
-    all_results = []
-
-    for model_name, client in models.items():
-        try:
-            results_df = run_experiment(client, data, model_name)
-            all_results.append(results_df)
-        except Exception as e:
-            print(f"Error running {model_name}: {e}")
-
-    # Add baselines
-    print("\nComputing baselines...")
-    baseline_df = compute_baselines(data)
-    all_results.append(baseline_df)
-
-    # Combine all results
-    combined_df = pd.concat(all_results, ignore_index=True)
-
-    # Analyze
-    print("\nAnalyzing results...")
-    analysis = analyze_results(combined_df)
-
-    # Print summary
-    print("\n" + "="*60)
-    print("RESULTS SUMMARY")
-    print("="*60)
-
-    print("\nOverall Accuracy by Model:")
-    for model, acc in sorted(analysis["overall_accuracy"].items()):
-        print(f"  {model}: {acc:.1%}")
-
-    # Save
-    save_results(combined_df, analysis)
-
-    return combined_df, analysis
 
 
 if __name__ == "__main__":
-    main()
+    print("=" * 60)
+    print("Character Tracking Limit Experiment")
+    print("=" * 60)
+
+    openai_key = os.environ.get("OPENAI_API_KEY")
+    if not openai_key:
+        print("ERROR: OPENAI_API_KEY not set")
+        sys.exit(1)
+
+    openai_client = OpenAI(api_key=openai_key)
+
+    models = {
+        "gpt-4.1-mini": {
+            "client": openai_client,
+            "model_id": "gpt-4.1-mini",
+        },
+        "gpt-4.1": {
+            "client": openai_client,
+            "model_id": "gpt-4.1",
+        },
+    }
+
+    all_results, dataset = run_experiment(
+        models=models,
+        character_counts=[2, 4, 8, 16, 32],
+        stories_per_count=5,
+        state_changes=2,
+    )
+
+    print("\nExperiment complete! Results saved to results/")

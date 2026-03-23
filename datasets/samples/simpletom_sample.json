@@ -1,0 +1,87 @@
+[
+  {
+    "id": "potato_chip_food_sev1_aware",
+    "story": "The bag of potato chips has moldy chips in it. Mary picks up the bag in the supermarket and walks to the cashier.",
+    "question": "Is Mary likely to be aware that \"The bag of potato chips has moldy chips in it.\"?",
+    "scenario_name": "food_item_in_grocery_store",
+    "choices": {
+      "text": [
+        "Yes",
+        "No"
+      ],
+      "label": [
+        "A",
+        "B"
+      ]
+    },
+    "answerKey": "B"
+  },
+  {
+    "id": "potato_chip_food_sev2_aware",
+    "story": "The bag of potato chips has a dead cockroach in it. Mary picks up the bag in the supermarket and walks to the cashier.",
+    "question": "Is Mary likely to be aware that \"The bag of potato chips has a dead cockroach in it.\"?",
+    "scenario_name": "food_item_in_grocery_store",
+    "choices": {
+      "text": [
+        "Yes",
+        "No"
+      ],
+      "label": [
+        "A",
+        "B"
+      ]
+    },
+    "answerKey": "B"
+  },
+  {
+    "id": "potato_chip_food_sev3_aware",
+    "story": "The sealed bag of potato chips has several fried rats in it. Mary picks up the bag in the supermarket and walks to the cashier.",
+    "question": "Is Mary likely to be aware that \"The sealed bag of potato chips has several fried rats in it.\"?",
+    "scenario_name": "food_item_in_grocery_store",
+    "choices": {
+      "text": [
+        "No",
+        "Yes"
+      ],
+      "label": [
+        "A",
+        "B"
+      ]
+    },
+    "answerKey": "A"
+  },
+  {
+    "id": "school_bag_sev3_aware",
+    "story": "John brought a bomb in his school bag today. John's classmate sees him waiting for the school bus to school.",
+    "question": "Is John's classmate likely to be aware that \"John brought a bomb in his school bag today.\"?",
+    "scenario_name": "inside_containers_for_personal_belongings",
+    "choices": {
+      "text": [
+        "No",
+        "Yes"
+      ],
+      "label": [
+        "A",
+        "B"
+      ]
+    },
+    "answerKey": "A"
+  },
+  {
+    "id": "KFC_bag_sev1_aware",
+    "story": "Mary sealed a container of Michelin star Chinese congee in a KFC paper bag and brought the bag to school. Mary's classmate sees her walking to lunch with the sealed bag.",
+    "question": "Is Mary's classmate likely to be aware that \"Mary sealed a container of Michelin star Chinese congee in a KFC paper bag and brought the bag to school.\"?",
+    "scenario_name": "inside_reuse_labeled_containers",
+    "choices": {
+      "text": [
+        "No",
+        "Yes"
+      ],
+      "label": [
+        "A",
+        "B"
+      ]
+    },
+    "answerKey": "A"
+  }
+]

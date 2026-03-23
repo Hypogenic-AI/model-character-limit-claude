@@ -1,0 +1,15 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+We presented a systematic study of character tracking capacity in frontier language models, varying the number of characters from 2 to 64 in controlled synthetic narratives.
+Our key findings are: (1)~both \gptfull and \gptmini achieve perfect accuracy up to 16~characters and maintain above 93\% accuracy at 64~characters; (2)~when errors occur, they are overwhelmingly confusions between characters (93.9\% for \gptmini), not forgetting; (3)~degradation is gradual, with no sharp cliff; and (4)~the smaller \gptmini outperforms the larger \gptfull, partly due to a specific failure mode in \gptfull on compound possession-change sentences.
+
+These results establish a new empirical baseline for entity tracking in frontier models and provide error-pattern evidence consistent with the associative tracking mechanisms identified by recent interpretability work~\citep{li2025state}.
+The confusion-dominated error pattern suggests that character attributes are stored in overlapping distributed representations, where increased entity count leads to cross-character interference rather than information loss.
+
+\para{Future work.}
+Several directions follow naturally from this work.
+Testing additional model families (Claude, Gemini, open-weight models) would establish the generality of our findings.
+Extending to naturalistic narratives with annotated character states would test whether our synthetic results transfer to ecologically valid settings.
+Tracking additional attribute types---beliefs, emotions, relationships---would determine whether the capacity limit is per-character or per-attribute-slot.
+Finally, probing studies on open-weight models could directly measure the representational overlap that our behavioral results imply.

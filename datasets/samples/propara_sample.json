@@ -1,0 +1,370 @@
+[
+  {
+    "para_id": "37",
+    "sentence_texts": [
+      "A plant of animal dies in a watery environment.",
+      "Is buried in mud and silt.",
+      "Soft tissues quickly decompose leaving behind hard bones or shells.",
+      "Over time sediment builds over the top and hardens into rock.",
+      "As the bone decays mineral seeps in replacing it.",
+      "Fossils are formed."
+    ],
+    "participants": [
+      "plant; animal",
+      "soft tissues",
+      "bones",
+      "mineral",
+      "fossils"
+    ],
+    "states": [
+      [
+        "watery environment",
+        "watery environment",
+        "mud and silt",
+        "mud and silt",
+        "rock",
+        "rock",
+        "rock"
+      ],
+      [
+        "?",
+        "?",
+        "?",
+        "-",
+        "-",
+        "-",
+        "-"
+      ],
+      [
+        "?",
+        "?",
+        "?",
+        "?",
+        "rock",
+        "-",
+        "-"
+      ],
+      [
+        "?",
+        "?",
+        "?",
+        "?",
+        "?",
+        "rock",
+        "rock"
+      ],
+      [
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "?"
+      ]
+    ]
+  },
+  {
+    "para_id": "38",
+    "sentence_texts": [
+      "The animal dies and the body falls down.",
+      "It is not eaten by anything.",
+      "The body falls in a sandy or wet place.",
+      "The soil forms around the body.",
+      "Time passes on and the rock forms.",
+      "Millions years later the fossil forms.",
+      "A person now finds the fossil."
+    ],
+    "participants": [
+      "animal; body",
+      "soil",
+      "rock",
+      "fossil"
+    ],
+    "states": [
+      [
+        "?",
+        "?",
+        "sandy or wet place",
+        "sandy or wet place",
+        "sandy or wet place",
+        "sandy or wet place",
+        "-",
+        "-"
+      ],
+      [
+        "?",
+        "?",
+        "?",
+        "?",
+        "around the body",
+        "-",
+        "-",
+        "-"
+      ],
+      [
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "around the body",
+        "around the body",
+        "around the body"
+      ],
+      [
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "rock",
+        "rock"
+      ]
+    ]
+  },
+  {
+    "para_id": "67",
+    "sentence_texts": [
+      "Plants die.",
+      "The dead plants end up in swamps.",
+      "The dead plants sink to the bottom of the swamps.",
+      "Many more dead plants sink in the same area.",
+      "The dead plants join together forming peat.",
+      "Sediment covers the peat.",
+      "The peat continues to decompose.",
+      "The peat keeps carbon while eliminating other elements.",
+      "The peat turns into coal after a long time."
+    ],
+    "participants": [
+      "plants; dead plants",
+      "peat",
+      "coal"
+    ],
+    "states": [
+      [
+        "?",
+        "?",
+        "swamp",
+        "bottom of the swamp",
+        "bottom of the swamp",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-"
+      ],
+      [
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "bottom of the swamp",
+        "bottom of the swamp",
+        "bottom of the swamp",
+        "bottom of the swamp",
+        "-"
+      ],
+      [
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "bottom of the swamp"
+      ]
+    ]
+  },
+  {
+    "para_id": "68",
+    "sentence_texts": [
+      "300 millions years ago plants and trees died.",
+      "The plant and tree remains sank to the bottom of steamy, swampy areas.",
+      "Layer upon layer of remains accumulated.",
+      "Eventually forming a soggy, dense material called peat.",
+      "The peat was buried over millions of years by sand, clay, and other mineral material.",
+      "Pressure caused by the wait of the materials squeezed water from the peat.",
+      "With the heat caused by increased burial peat slowly became coal."
+    ],
+    "participants": [
+      "plants; trees",
+      "plant and tree remains",
+      "peat; burial peat",
+      "water",
+      "heat",
+      "coal"
+    ],
+    "states": [
+      [
+        "?",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-"
+      ],
+      [
+        "-",
+        "?",
+        "area",
+        "steamy , swampy area",
+        "swampy area",
+        "sand , clay , and other mineral material",
+        "swampy area",
+        "swampy area"
+      ],
+      [
+        "-",
+        "-",
+        "-",
+        "-",
+        "steamy , swampy area",
+        "sand , clay , and other mineral material",
+        "swampy area",
+        "-"
+      ],
+      [
+        "steamy , swampy area",
+        "steamy , swampy area",
+        "steamy , swampy area",
+        "steamy , swampy area",
+        "peat",
+        "peat",
+        "-",
+        "-"
+      ],
+      [
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "burial peat"
+      ],
+      [
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "burial peat"
+      ]
+    ]
+  },
+  {
+    "para_id": "69",
+    "sentence_texts": [
+      "Plants and trees die.",
+      "Dead plants and trees pile up at the bottom of swamps.",
+      "Dead plants and trees form layers called peat.",
+      "Sand and clay cover the peat.",
+      "The sand and clay form sedimentary rocks.",
+      "Pressure caused by sedimentary rocks squeezes water out of the peat.",
+      "Heat changes the material into coal."
+    ],
+    "participants": [
+      "plants;trees",
+      "peat",
+      "sand",
+      "clay",
+      "sedimentary rocks",
+      "pressure",
+      "water",
+      "coal"
+    ],
+    "states": [
+      [
+        "?",
+        "?",
+        "bottom of swamp",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-"
+      ],
+      [
+        "-",
+        "-",
+        "-",
+        "bottom of swamp",
+        "bottom of swamp",
+        "bottom of swamp",
+        "bottom of swamp",
+        "-"
+      ],
+      [
+        "bottom of swamp",
+        "bottom of swamp",
+        "bottom of swamp",
+        "bottom of swamp",
+        "bottom of swamp",
+        "-",
+        "-",
+        "-"
+      ],
+      [
+        "bottom of swamp",
+        "bottom of swamp",
+        "bottom of swamp",
+        "bottom of swamp",
+        "bottom of swamp",
+        "-",
+        "-",
+        "-"
+      ],
+      [
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "bottom of swamp",
+        "bottom of swamp",
+        "bottom of swamp"
+      ],
+      [
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "sedimentary rock",
+        "sedimentary rock"
+      ],
+      [
+        "bottom of swamp",
+        "bottom of swamp",
+        "bottom of swamp",
+        "peat",
+        "peat",
+        "peat",
+        "?",
+        "?"
+      ],
+      [
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "-",
+        "bottom of swamp"
+      ]
+    ]
+  }
+]

@@ -1,0 +1,11 @@
+\begin{abstract}
+How many characters can a language model simultaneously track in a narrative?
+We present a systematic study that varies the number of characters from 2 to 64 in controlled synthetic stories, measuring how accurately frontier models report each character's current location and possession after a series of state changes.
+We test two models---\gptfull and \gptmini---across three experimental conditions: a main scaling experiment, an extended range experiment (up to 64 characters), and a stress test with increased state-change density.
+Both models achieve perfect accuracy up to 16~characters and maintain above 93\% accuracy even at 64~characters, far exceeding previously reported limits.
+When errors do occur, they are overwhelmingly \emph{confusion errors}---the model assigns an attribute belonging to a different character---rather than forgetting errors.
+For \gptmini, 93.9\% of all errors are confusions.
+This error pattern suggests that character attributes are stored in overlapping distributed representations rather than independent memory slots, consistent with recent mechanistic interpretability findings on transformer state tracking.
+We also find, counterintuitively, that \gptmini outperforms \gptfull, and that degradation is gradual rather than cliff-like.
+Our results establish a new empirical baseline for entity tracking capacity in frontier models and provide error-pattern evidence bearing on the internal mechanisms transformers use for multi-entity reasoning.
+\end{abstract}

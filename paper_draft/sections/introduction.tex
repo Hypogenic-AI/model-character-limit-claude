@@ -1,0 +1,30 @@
+\section{Introduction}
+\label{sec:intro}
+
+Language models now summarize novels, write screenplays, and answer questions about complex narratives---all tasks that require keeping track of who is where and who has what.
+But how many characters can a model actually track at once?
+Prior work on entity tracking has either fixed the entity count at a single value~\citep{kim2023entity} or used naturalistic texts where character count and document length are hopelessly confounded~\citep{hamilton2025tldm}.
+No study has systematically varied the number of tracked entities while holding other factors constant.
+
+We fill this gap.
+We construct synthetic narratives containing 2 to 64 named characters, each with a location and a possession that change over the course of the story.
+After presenting the full narrative, we ask the model to report every character's final state via structured JSON output.
+By comparing model responses against programmatic ground truth, we measure accuracy as a function of character count and classify every error as a \emph{confusion} (the model's answer belongs to a different character), a \emph{forgetting} error (the answer reverts to the character's initial state), or \emph{other}.
+
+Our main findings are:
+\begin{itemize}[leftmargin=*,itemsep=0pt,topsep=0pt]
+\item We show that frontier 2025 models (\gptfull and \gptmini) achieve \textbf{perfect accuracy up to 16~characters} and maintain $>$93\% accuracy at 64~characters---substantially higher than prior benchmarks suggested (\eg 65\% for Code Llama 70B on 7~entities;~\citealt{kim2024code}).
+\item We find that errors are overwhelmingly \textbf{confusions} (93.9\% for \gptmini), not forgetting, implying that character representations overlap rather than occupying independent memory slots.
+\item We observe \textbf{gradual, not cliff-like} degradation, with no sharp transition point---suggesting a continuous capacity mechanism rather than a discrete slot limit.
+\item We discover that \gptmini \textbf{outperforms} \gptfull, and identify a specific failure mode in \gptfull where compound drop-then-pickup sentences cause possession-tracking errors.
+\end{itemize}
+
+These results bear on both practice and theory.
+For practitioners, they establish that frontier models are reliable for narratives with up to $\sim$16 characters without augmentation; beyond 32, retrieval-augmented approaches may help.
+For researchers studying transformer internals, the confusion-dominated error pattern provides behavioral evidence consistent with the associative tracking algorithms identified by \citet{li2025state} through mechanistic interpretability.
+
+The rest of this paper is organized as follows.
+\Secref{sec:related} surveys prior work on entity tracking and narrative understanding.
+\Secref{sec:method} describes our synthetic story generation, experimental protocol, and error taxonomy.
+\Secref{sec:results} presents the main results, and \secref{sec:discussion} interprets them.
+\Secref{sec:conclusion} concludes.

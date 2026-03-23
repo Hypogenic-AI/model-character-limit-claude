@@ -1,0 +1,83 @@
+\section{Methodology}
+\label{sec:method}
+
+\subsection{Synthetic Story Generation}
+\label{sec:storygen}
+
+We generate synthetic narratives with a procedural story generator that gives us precise control over the number of characters, attributes, and state changes.
+Each story follows a three-phase structure:
+
+\para{Introduction phase.}
+Each of $N$ characters is introduced with a name, an initial location, and an initial possession.
+For example: \emph{``Viktor was in the market, carrying a tattered map. Diana was in the workshop, carrying a crystal vial.''}
+
+\para{Event phase.}
+Each character undergoes a fixed number of state changes (2 in the main experiment, 4 in the stress test).
+Events are either location changes (\emph{``Viktor went to the courtyard''}) or possession swaps (\emph{``Diana set down a crystal vial. Diana picked up a golden key''}).
+Events are interleaved across characters to create a realistic narrative flow.
+
+\para{Query phase.}
+After the full story, we ask the model to report the final location and possession of every character simultaneously via structured JSON output.
+
+\para{Name and attribute pools.}
+We use 72 distinctive, cross-culturally diverse character names, 32 distinct locations, and 32 distinct possessions.
+All names and attributes are chosen to be easily distinguishable, minimizing the chance that errors stem from lexical confusion.
+Ground truth for every query is verified programmatically, with zero ambiguity.
+
+\subsection{Experimental Conditions}
+
+We run three experimental conditions, summarized in \tabref{tab:conditions}.
+
+\begin{table}[t]
+\centering
+\caption{Experimental conditions. Each condition varies character count $N$, the number of state changes per character, and the number of stories per $N$ value.}
+\label{tab:conditions}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Condition} & \textbf{Character counts} & \textbf{State changes} & \textbf{Stories per $N$} \\
+\midrule
+Main & 2, 4, 8, 16, 32 & 2 & 5 \\
+Extended & 2, 4, 8, 16, 32, 48, 64 & 2 & 3 \\
+Stress & 4, 8, 16, 32 & 4 & 3 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The main experiment tests 5 character counts with 5 stories each, yielding 620 total questions across 2 models.
+The extended experiment pushes to 64 characters with 3 stories per count (1,044 total questions).
+The stress test doubles the state-change density to examine the interaction between tracking load and update complexity.
+
+\subsection{Models}
+
+We evaluate two frontier models from the GPT-4.1 family: \gptfull (the flagship model) and \gptmini (a smaller, optimized variant).
+All generations use temperature 0 and seed 42 for reproducibility, with max tokens scaled from 256 (for 2~characters) to 8,192 (for 64~characters).
+
+\subsection{Baselines}
+
+We compute two baselines to contextualize model performance:
+
+\para{\randombaseline baseline.}
+For each question, guess uniformly at random from all attribute values mentioned in the story.
+This yields 5.7--9.7\% accuracy depending on the number of characters (more characters $=$ more possible values $=$ lower random accuracy).
+
+\para{\initialstate baseline.}
+Always predict each character's initial attribute (the value from the introduction phase, before any state changes).
+This yields 28.4--29.4\% accuracy, since roughly one in three or four attributes happens not to change.
+
+\subsection{Evaluation Metrics}
+
+\para{Accuracy.}
+We compute exact-match accuracy: the fraction of (character, attribute) queries for which the model's answer matches the ground truth.
+We report 95\% bootstrap confidence intervals for all accuracy estimates.
+
+\para{Error taxonomy.}
+We classify every incorrect answer into one of three categories:
+\begin{itemize}[leftmargin=*,itemsep=0pt,topsep=0pt]
+\item \textbf{Confusion}: The model's answer is the correct current value for a \emph{different} character. This indicates cross-character interference.
+\item \textbf{Forgetting}: The model's answer matches the character's \emph{initial} attribute (before state changes). This indicates failure to register updates.
+\item \textbf{Other}: The answer is neither another character's current value nor the queried character's initial value (\eg returning ``none'' or a hallucinated value).
+\end{itemize}
+
+\para{Position analysis.}
+We compute Spearman rank correlation between a character's introduction order (position in the story) and accuracy, to test for primacy/recency effects consistent with the ``lost in the middle'' phenomenon~\citep{liu2024lost}.

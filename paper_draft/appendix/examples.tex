@@ -1,0 +1,43 @@
+\section{Example Story}
+\label{app:example}
+
+Below is a complete example from the 4-character condition, illustrating the three-phase story structure used in our experiments.
+
+\para{Introduction phase.}
+\begin{quote}
+\small
+Viktor was in the market, carrying a tattered map.
+Diana was in the workshop, carrying a crystal vial.
+Ivan was in the terrace, carrying a leather journal.
+Suki was in the library, carrying a woven basket.
+\end{quote}
+
+\para{Event phase.}
+\begin{quote}
+\small
+Diana set down a crystal vial. Diana picked up a golden key.
+Viktor went to the courtyard.
+Ivan headed over to the greenhouse.
+Suki strolled into the forge.
+
+Viktor made their way to the tavern.
+Diana walked to the balcony.
+Ivan put a leather journal aside. Ivan grabbed a silk ribbon.
+Suki went to the attic.
+\end{quote}
+
+\para{Query and ground truth.}
+\begin{quote}
+\small
+\textbf{Q:} Where is Viktor now? \textbf{A:} the tavern \\
+\textbf{Q:} What is Viktor carrying? \textbf{A:} a tattered map \\
+\textbf{Q:} Where is Diana now? \textbf{A:} the balcony \\
+\textbf{Q:} What is Diana carrying? \textbf{A:} a golden key \\
+\textbf{Q:} Where is Ivan now? \textbf{A:} the greenhouse \\
+\textbf{Q:} What is Ivan carrying? \textbf{A:} a silk ribbon \\
+\textbf{Q:} Where is Suki now? \textbf{A:} the attic \\
+\textbf{Q:} What is Suki carrying? \textbf{A:} a woven basket
+\end{quote}
+
+Note that Viktor's possession (tattered map) and Suki's possession (woven basket) do not change during the story, while Diana's and Ivan's possessions are swapped via drop-then-pickup sequences.
+The model must track all eight attribute values simultaneously and report them via structured JSON output.

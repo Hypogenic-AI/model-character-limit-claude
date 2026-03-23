@@ -1,0 +1,813 @@
+You are an academic paper writer. Generate a complete NEURIPS style paper
+based on the experiment results provided.
+
+════════════════════════════════════════════════════════════════════════════════
+                         IMPORTANT: BEFORE YOU START
+════════════════════════════════════════════════════════════════════════════════
+
+Before writing any content, you MUST complete these steps:
+
+1. READ THE SKILL: Review the paper-writer skill at .claude/skills/paper-writer/SKILL.md
+2. READ THE STYLE GUIDE: Study templates/paper_writing/lab_style_guide.md carefully
+3. REVIEW EXAMPLES: Browse paper_examples/ for formatting and language patterns:
+   - Look at sections/1.introduction.tex for language style
+   - Look at tables/*.tex for table formatting
+   - Look at commands/*.tex for macro usage
+4. VERIFY COMMAND TEMPLATES: Command templates (math.tex, general.tex, macros.tex) are pre-copied to paper_draft/commands/
+
+CRITICAL: Reference example papers for FORMATTING and LANGUAGE STYLE only.
+Do NOT copy content, phrasing, or narrative structure from the example papers.
+The examples are in a different research domain - focus only on presentation style.
+
+════════════════════════════════════════════════════════════════════════════════
+                            EXPERIMENT REPORT
+════════════════════════════════════════════════════════════════════════════════
+
+# Research Report: How Many Characters Can a Language Model Keep Track Of?
+
+## 1. Executive Summary
+
+We systematically tested how many characters frontier language models (GPT-4.1 and GPT-4.1-mini) can track in synthetic narratives with 2 to 64 characters. Both models achieve **perfect accuracy up to 16 characters** and maintain **&gt;85% accuracy even at 64 characters** — far higher than previously suggested limits in the literature. When errors occur, they are overwhelmingly **confusion errors** (93.9% for GPT-4.1-mini), where models swap attributes between characters rather than forgetting state changes entirely. This suggests models use a shared associative memory for character tracking rather than independent per-character slots.
+
+**Key finding**: The character tracking limit for frontier 2025 models is remarkably high (~32+ characters before meaningful degradation), representing substantial improvement over models tested in prior work. The dominant failure mode — attribute confusion between characters — suggests the mechanism involves overlapping distributed representations rather than a fixed-slot memory system.
+
+## 2. Goal
+
+**Hypothesis**: There is a limit to how many characters a language model can track in-context, and the point of failure reveals the underlying tracking mechanism.
+
+**Why this matters**: Complex narratives (novels, screenplays, legal documents) contain many interacting characters. Understanding where models fail — and *how* they fail — informs both practical applications (e.g., when to use RAG augmentation) and theoretical understanding of transformer memory.
+
+**Gap filled**: No prior work systematically varied character count from 2 to 64 in controlled settings. The Boxes benchmark (Kim &amp; Schuster, 2023) used a fixed 7 entities; TLDM (Hamilton et al., 2025) tested real novels where character count and text length co-vary uncontrollably.
+
+## 3. Data Construction
+
+### Dataset Description
+We generated **synthetic narratives** with controlled parameters using a procedural story generator (`src/story_generator.py`). Each story introduces N characters, each with a location and a possession, then describes state changes (characters moving to new locations and swapping items).
+
+**Parameters**:
+- Character counts: 2, 4, 8, 16, 32, 48, 64
+- Attributes per character: 2 (location, possession)
+- State changes per character: 2 (main experiment), 4 (stress test)
+- Stories per condition: 3-5
+- Total: 25 stories (main), 21 stories (extended), 12 stories (stress test)
+- Total questions: 620 (main), 1,044 (extended), 360 (stress test)
+
+### Example Sample (4 characters)
+
+**Story**:
+&gt; Viktor was in the market, carrying a tattered map. Diana was in the workshop, carrying a crystal vial. Ivan was in the terrace, carrying a leather journal. Suki was in the library, carrying a woven basket.
+&gt;
+&gt; Diana set down a crystal vial. Diana picked up a golden key. Viktor went to the courtyard. Ivan headed over to the greenhouse. Suki strolled into the forge.
+&gt;
+&gt; Viktor made their way to the tavern. Diana walked to the balcony. Ivan put a leather journal aside. Ivan grabbed a silk ribbon. Suki went to the attic.
+
+**Questions**: &#34;Where is Viktor now?&#34; → &#34;the tavern&#34;; &#34;What is Diana carrying?&#34; → &#34;a golden key&#34;
+
+### Data Quality
+- All ground truth answers verified programmatically
+- No ambiguous state changes; 0% missing values
+- 72 distinctive cross-culturally diverse character names
+- 32 distinct locations and 32 distinct possessions
+
+## 4. Experiment Description
+
+### Methodology
+
+#### High-Level Approach
+Present each synthetic story to a model and ask it to report the final location and possession for every character simultaneously (via structured JSON output). Compare model answers to programmatic ground truth. Classify errors by type: **confusion** (answer belongs to another character), **forgetting** (answer reverts to initial state), or **other**.
+
+#### Why This Method?
+1. **JSON batch queries** avoid prompt-repetition overhead and test true multi-character tracking
+2. **Synthetic stories** allow precise control over character count while eliminating confounds
+3. **Error taxonomy** distinguishes failure modes that imply different internal mechanisms
+
+### Implementation Details
+
+#### Tools and Libraries
+| Library | Version | Purpose |
+|---------|---------|---------|
+| Python | 3.12.8 | Runtime |
+| openai | 2.14.0 | API client |
+| numpy | 2.4.0 | Numerical computation |
+| pandas | 2.3.3 | Data manipulation |
+| scipy | 1.16.3 | Statistical tests |
+| matplotlib | 3.10.8 | Visualization |
+
+#### Models Tested
+| Model | Provider | Type |
+|-------|----------|------|
+| GPT-4.1 | OpenAI | Flagship frontier model |
+| GPT-4.1-mini | OpenAI | Smaller, optimized variant |
+
+#### Hyperparameters
+| Parameter | Value | Rationale |
+|-----------|-------|-----------|
+| temperature | 0 | Deterministic for reproducibility |
+| max_tokens | 256–8192 | Scaled with character count |
+| seed | 42 | Reproducibility |
+
+### Experimental Protocol
+
+#### Conditions
+1. **Main experiment**: 2, 4, 8, 16, 32 characters × 5 stories × 2 models
+2. **Extended experiment**: 2, 4, 8, 16, 32, 48, 64 characters × 3 stories × 2 models
+3. **Stress test**: 4, 8, 16, 32 characters × 3 stories × 4 state changes × 2 models
+
+#### Baselines
+- **Random**: 5.7–9.7% (guess uniformly from mentioned values)
+- **Initial-state**: 28.4–29.4% (always predict starting attribute)
+
+### Raw Results
+
+#### Main Experiment (2 state changes per character, 5 stories per count)
+
+| Model | 2 chars | 4 chars | 8 chars | 16 chars | 32 chars |
+|-------|---------|---------|---------|----------|----------|
+| GPT-4.1-mini | 100.0% | 100.0% | 100.0% | 100.0% | 95.9% [93.8%, 97.8%] |
+| GPT-4.1 | 100.0% | 100.0% | 100.0% | 99.4% [98.1%, 100%] | 86.9% [83.1%, 90.6%] |
+
+#### Extended Experiment (3 stories per count, up to 64 characters)
+
+| Model | 2 | 4 | 8 | 16 | 32 | 48 | 64 |
+|-------|---|---|---|----|----|----|----|
+| GPT-4.1-mini | 100% | 100% | 100% | 100% | 96.9% | 93.8% | 93.5% |
+| GPT-4.1 | 100% | 100% | 100% | 100% | 85.4% | 93.4% | 94.8% |
+
+#### Stress Test (4 state changes per character)
+
+| Model | 4 chars | 8 chars | 16 chars | 32 chars |
+|-------|---------|---------|----------|----------|
+| GPT-4.1-mini | 100.0% | 97.9% | 97.9% | 97.4% |
+| GPT-4.1 | 100.0% | 97.9% | 91.7% | 84.4% |
+
+#### Error Type Distribution (Extended Experiment)
+
+| Model | Confusion | Forgetting | Other | Total Errors |
+|-------|-----------|------------|-------|--------------|
+| GPT-4.1-mini | 46 (93.9%) | 2 (4.1%) | 1 (2.0%) | 49 |
+| GPT-4.1 | 44 (65.7%) | 0 (0%) | 23 (34.3%) | 67 |
+
+*Note: GPT-4.1&#39;s &#34;other&#34; errors at 32 characters are predominantly the model returning &#34;none&#34; for possessions — it processes the &#34;drop&#34; event but fails to register the subsequent &#34;pickup&#34; in compound sentences.*
+
+### Visualizations
+
+All plots in `results/plots/`:
+- `degradation_curve.png`: Accuracy vs character count with 95% CIs
+- `error_types.png`: Error type breakdown by character count
+- `stress_comparison.png`: 2 vs 4 state changes comparison
+- `attribute_comparison.png`: Location vs possession accuracy
+
+## 5. Result Analysis
+
+### Key Findings
+
+**Finding 1: The character tracking limit is surprisingly high for frontier models.**
+Both GPT-4.1 and GPT-4.1-mini achieve perfect accuracy up to 16 characters and maintain &gt;85% accuracy at 64 characters. This is a major advance over ~65% accuracy Code Llama 70B achieved on the 7-entity Boxes task (Kim et al., 2024).
+
+**Finding 2: Confusion errors dominate overwhelmingly.**
+When GPT-4.1-mini makes errors, 93.9% are confusion errors — the model assigns an attribute that belongs to a different character. Only 4.1% are forgetting errors. This implies the model&#39;s internal character representations *overlap* rather than being independently tracked.
+
+**Finding 3: GPT-4.1-mini outperforms GPT-4.1.**
+Counterintuitively, the smaller model achieves higher accuracy (95.3% vs 93.6% overall). GPT-4.1 shows a specific weakness with possession-swap sequences, returning &#34;none&#34; for items that were dropped and then replaced.
+
+**Finding 4: No &#34;cliff&#34; — degradation is gradual.**
+Accuracy degrades gradually from 100% at 16 characters to ~93% at 64 characters. The transition is smooth, suggesting a continuous capacity mechanism rather than a discrete slot limit.
+
+**Finding 5: State changes interact with character count.**
+With 4 state changes per character, GPT-4.1 drops to 84.4% at 32 characters (vs ~86.9% with 2 changes). GPT-4.1-mini is remarkably robust: 97.4% with 4 changes.
+
+**Finding 6: No significant position effect.**
+Character introduction order does not significantly predict accuracy (Spearman r=0.024, p=0.45 for GPT-4.1-mini). The &#34;lost in the middle&#34; effect does not manifest strongly here.
+
+**Finding 7: Location and possession tracking are comparably difficult, with one exception.**
+Both attribute types show similar degradation, except GPT-4.1 struggles specifically with possession tracking at 32 characters (71.9% vs 99.0% for location) due to misinterpreting compound drop-then-pickup sentences.
+
+### Statistical Tests
+
+| Test | Model | Statistic | p-value |
+|------|-------|-----------|---------|
+| Spearman (char count vs accuracy) | GPT-4.1-mini | r = -0.104 | 0.0007 |
+| Spearman (char count vs accuracy) | GPT-4.1 | r = 0.005 | 0.86 |
+| Position effect (intro order vs accuracy) | GPT-4.1-mini | r = 0.024 | 0.45 |
+| Position effect (intro order vs accuracy) | GPT-4.1 | r = 0.088 | 0.006 |
+
+### Mechanistic Implications
+
+The overwhelming dominance of confusion errors suggests:
+
+1. **Models do NOT use independent per-character memory slots.** If they did, errors would be primarily forgetting (losing a slot&#39;s content), not confusion (mixing slot contents).
+
+2. **Character attributes are stored in overlapping distributed representations.** When the model fails, it retrieves a plausible attribute from the wrong character — consistent with superposition in transformer hidden states (Li et al., 2025).
+
+3. **The tracking mechanism resembles an associative memory with limited precision.** The model can store many (name, attribute) bindings but precision degrades as more entries compete for representational bandwidth. This aligns with the Associative Algorithm identified by Li et al. (2025).
+
+4. **GPT-4.1&#39;s &#34;none&#34; errors reveal a sequential processing weakness.** The model correctly tracks the first event (dropping an item) but fails to integrate the second event (picking up a new item) in compound sentences. This points to attention allocation limitations.
+
+### Limitations
+
+1. **Synthetic stories only.** Our rigid story structure (intro → events → query) may be easier to track than naturalistic narratives with complex discourse, dialogue, and implicit references.
+2. **Two models from one provider.** Results may not generalize to other model families (Claude, Gemini, Llama).
+3. **Only two attribute types.** Real narratives require tracking beliefs, intentions, emotions — potentially much harder.
+4. **JSON batch format may help.** Structured output format may prompt more careful tracking than free-form questions.
+5. **Small sample sizes at high character counts.** Only 3 stories per condition in the extended experiment.
+6. **Temperature 0 doesn&#39;t eliminate stochasticity.** OpenAI models are not fully deterministic even at temperature 0.
+
+## 6. Conclusions
+
+### Summary
+Frontier language models can reliably track at least 16 characters perfectly and maintain &gt;93% accuracy up to 64 characters in controlled synthetic narratives. When they fail, they primarily **confuse attributes between characters** (93.9% of errors) rather than forgetting state changes, suggesting character tracking relies on overlapping distributed representations rather than discrete memory slots.
+
+### Implications
+- **Practical**: Frontier models are reliable for up to ~16 characters without augmentation. For 32+ characters, consider RAG or external state tracking, especially for complex state-change sequences.
+- **Theoretical**: The confusion-dominated error pattern supports the mechanistic interpretability findings of Li et al. (2025) — transformers use associative algorithms that degrade gracefully but imprecisely under load.
+- **Surprising**: GPT-4.1-mini outperforms GPT-4.1, suggesting model size is not the primary bottleneck for entity tracking.
+
+### Confidence in Findings
+**Medium-high.** The core finding (gradual degradation, confusion errors dominate) is robust across two models and multiple character counts. Specific accuracy numbers depend on our synthetic format and may differ in naturalistic settings.
+
+## 7. Next Steps
+
+### Immediate Follow-ups
+1. **Test more model families**: Claude Sonnet 4.5, Gemini 2.5 Pro, open-weight models (Llama 3, Qwen)
+2. **Naturalistic validation**: Test on real novel excerpts with annotated character states
+3. **More attributes**: Add emotions, beliefs, relationships to test if the limit is per-character or per-attribute-slot
+4. **Push to 128+ characters** to find the true breakdown point
+
+### Alternative Approaches
+- **Probing studies**: Use mechanistic interpretability on open-weight models to directly measure character representation overlap
+- **Adversarial naming**: Test with confusable names (e.g., &#34;Alex&#34; vs &#34;Alexa&#34;)
+- **Context length control**: Disentangle character count from text length by varying verbosity
+
+### Open Questions
+1. Why does GPT-4.1-mini outperform GPT-4.1? Task-specific or broader pattern?
+2. Does the confusion rate increase continuously or is there a phase transition at very high character counts?
+3. How do models handle characters with *similar* attributes (two characters in the same location)?
+
+## References
+
+1. Kim, N. &amp; Schuster, S. (2023). Entity Tracking in Language Models. ACL 2023.
+2. Kim, N., Schuster, S. &amp; Toshniwal, S. (2024). Code Pretraining Improves Entity Tracking. arXiv:2405.21068.
+3. Li, B., Guo, D. &amp; Andreas, J. (2025). (How) Do Language Models Track State? ICML 2025.
+4. Hamilton, M. et al. (2025). Too Long, Didn&#39;t Model (TLDM). arXiv:2505.14925.
+5. Liu, N. F. et al. (2024). Lost in the Middle. TACL 2024.
+6. Hsieh, C.-P. et al. (2024). RULER: What&#39;s the Real Context Size of Your Long-Context LLM? COLM 2024.
+7. Baruah, A. &amp; Narayanan, S. (2025). CHATTER: Character Attribution for Narrative Understanding. arXiv:2411.05227.
+8. Xu, Z. et al. (2024). OpenToM: A Comprehensive Benchmark for Theory-of-Mind. ACL 2024.
+
+## Appendix: File Manifest
+
+```
+results/
+├── all_results.json            # Main experiment raw results
+├── extended_results.json       # Extended experiment (up to 64 chars)
+├── stress_results.json         # Stress test (4 state changes)
+├── baselines.json              # Baseline accuracy scores
+├── extended_baselines.json     # Extended baselines
+├── config.json                 # Experiment configuration
+├── dataset.json                # Generated stories with ground truth
+├── results_gpt-4.1.json       # Per-model raw results
+├── results_gpt-4.1-mini.json
+└── plots/
+    ├── degradation_curve.png   # Main figure: accuracy vs char count
+    ├── error_types.png         # Error type distribution
+    ├── stress_comparison.png   # 2 vs 4 state changes
+    └── attribute_comparison.png # Location vs possession
+src/
+├── story_generator.py          # Synthetic story generation
+├── experiment.py               # Main experiment runner
+├── experiment_extended.py      # Extended + stress test
+└── analyze.py                  # Analysis and visualization
+```
+
+
+════════════════════════════════════════════════════════════════════════════════
+                            RESEARCH PLAN
+════════════════════════════════════════════════════════════════════════════════
+
+# Research Plan: How Many Characters Can a Model Keep Track Of?
+
+## Motivation &amp; Novelty Assessment
+
+### Why This Research Matters
+Language models are increasingly used for narrative understanding, summarization, and creative writing — all tasks requiring tracking multiple characters and their attributes. Understanding the limits of character tracking reveals fundamental constraints on LLM reasoning and has practical implications for complex narrative applications.
+
+### Gap in Existing Work
+The literature review reveals a critical gap: **no study systematically varies the number of characters** while holding other factors constant. Kim &amp; Schuster (2023) fix at 7 boxes; RULER uses fixed chain patterns; TLDM tests real novels where character count and text length co-vary. We lack a clean measurement of how accuracy degrades as a function of character count.
+
+### Our Novel Contribution
+1. **First systematic character-count scaling study**: Vary characters from 2 to 32 in controlled synthetic narratives
+2. **Error taxonomy**: Distinguish confusion errors (swapping attributes) from forgetting errors (reverting to initial state)
+3. **Multi-model comparison on 2025 frontier models**: GPT-4.1 plus models via OpenRouter
+4. **Attribute complexity interaction**: Test whether limits are per-character or per-attribute-slot
+
+### Experiment Justification
+- **Exp 1 (Character Count Scaling)**: Core measurement — the degradation curve. No prior work provides this.
+- **Exp 2 (Error Type Analysis)**: Determines *how* models fail, revealing tracking mechanism.
+
+## Research Question
+Given a synthetic narrative with N characters, each with tracked attributes that change, how does accuracy at reporting character states degrade as N increases? What error patterns emerge?
+
+## Hypothesis Decomposition
+- H1: Accuracy degrades monotonically with character count, with a sharp transition.
+- H2: Confusion errors (swapping attributes between characters) dominate over forgetting errors at high N.
+- H3: Characters mentioned less frequently or introduced later are tracked worse.
+
+## Proposed Methodology
+
+### Story Generation
+- **Character counts**: 2, 4, 8, 16, 32
+- **Attributes per character**: 2 (location, possession)
+- **State changes**: 2 per character (so total events scale with N)
+- **Stories per condition**: 5 (for confidence intervals)
+- **Names**: Distinctive, unambiguous names
+- **Ground truth**: Programmatically verified
+
+### Models to Test
+- GPT-4.1 (OpenAI API) — frontier model
+- GPT-4.1-mini (OpenAI API) — smaller frontier
+- At least one more via OpenRouter if available
+
+### Baselines
+1. Random: guess uniformly from mentioned values
+2. Initial-state: always predict starting attribute
+3. Most-recent-mention
+
+### Evaluation Metrics
+- Overall accuracy per character count
+- Per-character accuracy
+- Confusion rate: wrong answer belongs to another character
+- Forgetting rate: wrong answer is the initial state
+- Position effect: accuracy by introduction order
+
+### Statistical Analysis
+- Bootstrap 95% CIs for accuracy
+- Spearman correlation: character count vs accuracy
+
+## Expected Outcomes
+- Near-perfect at 2-4 characters, significant degradation by 16-32
+- Confusion errors increase with character count
+- Clear degradation curve suitable for identifying transition region
+
+## Timeline
+1. Setup + story generator: 20 min
+2. API experiments: 60 min
+3. Analysis + visualization: 30 min
+4. Documentation: 20 min
+
+## Success Criteria
+- Clear degradation curve with CIs across ≥5 character counts
+- Error taxonomy with confusion vs forgetting rates
+- Comparison across ≥2 models
+- Statistical significance of main findings
+
+
+════════════════════════════════════════════════════════════════════════════════
+                          LITERATURE REVIEW
+════════════════════════════════════════════════════════════════════════════════
+
+# Literature Review: How Many Characters Can a Model Keep Track Of?
+
+## Research Area Overview
+
+This review surveys work on language models&#39; ability to track entities (characters, objects, variables) and their changing states across text. The core question is: **at what point does tracking break down as the number of entities or state changes increases?** This intersects entity tracking in NLP, narrative understanding, theory-of-mind benchmarks, and mechanistic interpretability of transformers.
+
+---
+
+## Key Papers
+
+### 1. Entity Tracking in Language Models (Kim &amp; Schuster, 2023)
+- **Source**: ACL 2023 | arXiv:2305.02363
+- **Key Contribution**: Created a controlled synthetic &#34;Boxes&#34; benchmark to test entity tracking without shortcuts. Showed that prior claims of entity tracking (Li et al., 2021) were inflated by trivial baselines.
+- **Methodology**: 7 boxes, 100 object nouns, 12 state-changing operations per scenario. Models must predict box contents after N operations. Four harder variants test contextual references (AmbiRef, MoveContents), surface form generalization (AltForms), and compositional generalization (NumOps).
+- **Datasets Used**: New &#34;Boxes&#34; dataset (7 variants); reanalysis of Alchemy and TextWorld
+- **Key Results**:
+  - GPT-3 and Flan-T5: near-zero accuracy on non-trivial tracking (essentially repeat initial state)
+  - GPT-3.5 (code-pretrained): &gt;25% accuracy even after 7 operations per box, well above random baseline
+  - **Code pretraining is the key factor**, not RLHF or instruction tuning
+  - Finetuned T5-base achieves near-perfect accuracy on base split, proving the task is learnable
+  - Performance degrades monotonically with operation count; steepest drop at 0-3 operations
+  - Context-dependent operations (MoveContents, AmbiRef) accelerate breakdown
+- **Code**: https://github.com/sebschu/entity-tracking-lms
+- **Relevance**: **Central paper**. Directly measures how many state changes models can track per entity across 7 simultaneous entities.
+
+### 2. (How) Do Language Models Track State? (Li, Guo &amp; Andreas, 2025)
+- **Source**: ICML 2025 | arXiv:2503.02854
+- **Key Contribution**: Mechanistic interpretability study revealing two distinct algorithms transformers learn for state tracking: Associative Algorithm (AA) and Parity-Associative Algorithm (PAA).
+- **Methodology**: Permutation composition task (S3 and S5 symmetric groups) as a principled proxy for state tracking. S5 is NC1-complete, meaning any finite-state tracking task can be reduced to it. Uses probing, activation patching, and attention analysis on Pythia-160M and GPT-2 family models.
+- **Datasets Used**: 1M synthetic permutation sequences of length 100
+- **Key Results**:
+  - Models learn one of two algorithms: AA (hierarchical parallel scan, log-depth) or PAA (parity-first parallel computation, then associative scan for remainder)
+  - AA generalizes better to longer sequences; PAA is more brittle
+  - Architecture and initialization determine which algorithm emerges, **not model size**
+  - Models generalize perfectly up to training length (100), then degrade sharply at a &#34;cutoff length&#34;
+  - Code/topic-model pretraining steers toward AA; parity pretraining steers toward PAA
+  - Same associative signatures appear in natural-language versions of the task
+- **Code**: https://github.com/belindal/state-tracking
+- **Relevance**: Reveals the **internal mechanisms** for state tracking — important for understanding *why* models fail at higher entity counts.
+
+### 3. Code Pretraining Improves Entity Tracking (Kim, Schuster &amp; Toshniwal, 2024)
+- **Source**: arXiv:2405.21068
+- **Key Contribution**: Systematic confirmation that code pretraining causally improves entity tracking, using matched model pairs (base vs. code, holding architecture constant).
+- **Methodology**: Same Boxes task. Compared Llama 2 vs Code Llama, DeepSeek vs DeepSeek-Coder, Gemma vs CodeGemma across 7B/13B/70B scales. Also tested math-trained and alignment-tuned variants.
+- **Key Results**:
+  - Code training consistently helps; amount of code data matters (2T &gt; 500B tokens)
+  - Math training provides minimal benefit
+  - **Best result: Code Llama 70B-Instruct at 64.9% on non-trivial examples**
+  - 7B models cannot reliably beat random baseline at 5-7 operations — hard limit for small models
+  - Alignment tuning helps base models more than code models
+- **Relevance**: Quantifies the **scaling limits** — even the best 70B code model only achieves 65% on multi-step tracking.
+
+### 4. Too Long, Didn&#39;t Model (TLDM) (Hamilton et al., 2025)
+- **Source**: arXiv:2505.14925
+- **Key Contribution**: Benchmark showing all frontier LLMs lose stable narrative understanding beyond 64K tokens, with entity/character tracking (storyworld description) degrading fastest of three tasks.
+- **Methodology**: 40 English novels from Project Gutenberg. Three tasks: summarization, storyworld description (character locations), narrative time estimation. Compares full-novel outputs to chapter-level (short-context) outputs across 7 frontier models (GPT-4.1, Llama 4 Scout, DeepSeek V3, Gemini 2.0 Flash, Gemma 3, Qwen 3, Mistral Small).
+- **Key Results**:
+  - **Storyworld tracking (character locations) collapses most sharply** with novel length
+  - No model retains stable understanding beyond **64K tokens** despite claiming 1M+ context windows
+  - GPT-4.1 most robust; open-weight models degrade fastest
+  - Truncating to relevant section consistently improves performance — extraneous context hurts
+  - Performance scales linearly with parameter count
+  - Shuffling chapters hurts storyworlds but not time estimates
+- **Relevance**: **Directly measures character tracking in real narratives** at scale.
+
+### 5. CHATTER: Character Attribution for Narrative Understanding (Baruah &amp; Narayanan, 2025)
+- **Source**: arXiv:2411.05227
+- **Key Contribution**: Largest character attribution dataset (88K character-trope pairs from 660 movies, 2,998 characters, 12,967 tropes). Tests whether LLMs can identify character traits from screenplays.
+- **Methodology**: Binary classification of character-trope pairs. Full screenplay context (~42K tokens average, up to 158K). Five prompting strategies across closed and open-source models.
+- **Key Results**:
+  - Full script context actually *decreases* performance for most models (vs. priors alone)
+  - Gemini-1.5-Flash achieves 81.9% accuracy with priors; drops to 72.4% with full script
+  - Zero-shot segment prompting outperforms few-shot — adding examples hurts
+  - Models likely exploit pretraining knowledge of TVTropes
+- **Relevance**: Shows models fail to aggregate **distributed character information** across long contexts.
+
+### 6. OpenToM: Theory-of-Mind Benchmark (Xu et al., 2024)
+- **Source**: ACL 2024 | arXiv:2402.06044
+- **Key Contribution**: ToM benchmark with 696 narratives, 16K questions testing physical-world and psychological mental state tracking for multiple characters.
+- **Code**: https://github.com/seacowx/OpenToM
+- **Relevance**: Tests per-character belief and location tracking — core to the research question.
+
+### 7. Locations of Characters in Narratives (2025)
+- **Key Contribution**: Manually annotated datasets for character location tracking in fairy tales (Andersen, 15 stories) and novels (Persuasion).
+- **Key Results**: Best LLM achieves only ~62% on Andersen, ~56% on Persuasion.
+- **Relevance**: Direct benchmark for spatial entity tracking with low accuracy.
+
+### 8. Finding Flawed Fictions (2025)
+- **Key Contribution**: FLAWEDFICTIONS benchmark for plot hole detection. LLM performance degrades sharply as story length increases.
+- **Relevance**: Plot hole detection requires tracking character states and story consistency.
+
+### 9. Mary, the Cheeseburger-Eating Vegetarian (2025)
+- **Key Contribution**: Shows LLMs&#39; internal representations can detect character incoherence, but generated responses cannot reliably distinguish coherent from incoherent narratives. More sensitive to world-knowledge violations than character-trait violations.
+- **Relevance**: Demonstrates gap between representation and behavior for character tracking.
+
+### 10. EvolvTrip: Temporal Theory-of-Mind Graphs (2025)
+- **Key Contribution**: Proposes external knowledge graphs to compensate for LLM failures in tracking evolving character mental states in literature. Creates LitCharToM benchmark.
+- **Relevance**: Addresses the failure mode and proposes augmentation strategy.
+
+### 11. SCORE: Story Coherence via RAG (2025)
+- **Key Contribution**: Uses item status tracking + episode summaries + RAG for narrative coherence.
+- **Relevance**: Engineering solution implies the character tracking limitation exists and needs external augmentation.
+
+### 12. Tracking Discrete and Continuous Entity State (Dalvi et al., 2019)
+- **Source**: NAACL 2019 | arXiv:1904.03518
+- **Key Contribution**: Foundational structured prediction for entity state tracking in procedural text (ProPara dataset).
+- **Relevance**: Established task formulation and evaluation metrics.
+
+### 13. Lost in the Middle (Liu et al., 2024)
+- **Source**: TACL 2024 | arXiv:2307.03172
+- **Key Contribution**: U-shaped performance curve — models use information at beginning and end of context better than the middle.
+- **Relevance**: Characters introduced mid-story may be tracked worse.
+
+### 14. RULER Benchmark (Hsieh et al., 2024)
+- **Source**: COLM 2024 | arXiv:2404.06654
+- **Key Contribution**: Comprehensive long-context benchmark including Variable Tracking task (multi-hop variable assignment chains).
+- **Relevance**: Variable tracking is directly analogous to character attribute tracking.
+
+---
+
+## Common Methodologies
+
+1. **Synthetic controlled tasks**: Boxes task (Kim &amp; Schuster), permutation composition (Li et al.), RULER variable tracking — precisely control entity count and operation count
+2. **Benchmark evaluation on narratives**: TLDM, CHATTER, OpenToM, NoCha — test on real/semi-real stories
+3. **Probing and mechanistic analysis**: Linear probes on hidden states, activation patching, attention pattern analysis (Li et al.)
+4. **Scaling analysis**: Vary model size, context length, number of entities/operations to find breakdown points
+
+## Standard Baselines
+
+- **Random baseline**: Sample from contextually mentioned entities (Kim &amp; Schuster)
+- **Initial state copying**: Predict no change from initial state (trivially strong when most states unchanged)
+- **Chapter-level performance**: Compare full-novel to per-chapter results (TLDM)
+- **Priors-only**: Use model&#39;s pretraining knowledge without context (CHATTER)
+
+## Evaluation Metrics
+
+- **Exact match accuracy** by number of operations (Boxes task)
+- **Semantic similarity** between full-context and short-context outputs (TLDM)
+- **Jaccard similarity** for entity set comparison (TLDM storyworlds)
+- **F1 score** for character attribute classification (CHATTER, OpenToM)
+- **Probe accuracy** at each layer for mechanistic analysis
+
+## Datasets in the Literature
+
+| Dataset | Task | Entities | Scale | Used In |
+|---------|------|----------|-------|---------|
+| Boxes | Object tracking across moves | 7 boxes, ~20 objects | 90K examples | Kim &amp; Schuster 2023, 2024 |
+| Permutation sequences | State composition | 3-5 elements | 1M sequences | Li et al. 2025 |
+| OpenToM | Character belief tracking | 2-3 characters | 16K questions | Xu et al. 2024 |
+| TLDM (40 novels) | Character location tracking | Full cast | 40 novels | Hamilton et al. 2025 |
+| CHATTER | Character-trope attribution | 2,998 characters | 88K pairs | Baruah &amp; Narayanan 2025 |
+| ProPara | Process entity states | 2-5 entities | 445 paragraphs | Dalvi et al. 2019 |
+| NarrativeQA | Narrative comprehension | Variable | 33K QA pairs | Kočiský et al. 2018 |
+| SimpleToM | Theory of mind | 2 characters | 1,147 stories | allenai |
+| Andersen/Persuasion | Character locations | ~5-15 per story | 16 texts | 2025 |
+| RULER VT | Variable tracking | 2-10 chains | Configurable | Hsieh et al. 2024 |
+| NoCha | Claim verification | Novel characters | 1,001 pairs | Karpinska et al. 2024 |
+| FLAWEDFICTIONS | Plot hole detection | Variable | Configurable | 2025 |
+
+---
+
+## Gaps and Opportunities
+
+1. **No systematic character count scaling study**: No paper systematically varies the number of characters (e.g., 2, 4, 8, 16, 32) while holding story length constant. Kim &amp; Schuster fix at 7 boxes; RULER uses fixed chain patterns.
+2. **Synthetic vs. natural gap**: Boxes task is controlled but unrealistic; novel benchmarks are realistic but uncontrolled. A middle ground (synthetic stories with controllable character count) is needed.
+3. **Character attributes vs. character count**: Most work tracks one attribute per entity. How many distinct attributes per character can be tracked simultaneously?
+4. **Modern model evaluation**: Kim &amp; Schuster (2023) tested GPT-3.5; need evaluation of Claude, GPT-4, Gemini, Llama 3, etc.
+5. **Confusion vs. forgetting**: When models fail, do they confuse characters (swap attributes) or lose information entirely? This distinction has experimental implications.
+6. **Interaction between character count and context length**: More characters means longer text — these effects need disentangling.
+
+---
+
+## Recommendations for Our Experiment
+
+### Recommended Approach
+Design a controlled experiment that systematically varies the number of characters in a story while testing the model&#39;s ability to track per-character attributes. Use synthetic story generation to control:
+- Number of characters (2, 4, 8, 16, 32, 64)
+- Number of attributes per character (name, location, possession, relationship)
+- Number of state changes per character
+- Total story length
+
+### Recommended Datasets
+1. **Primary**: Generate synthetic stories extending the Boxes paradigm to character narratives (use entity-tracking-lms code as starting point)
+2. **Validation**: OpenToM (multi-character belief tracking) and ProPara (entity state tracking)
+3. **Real-world validation**: TLDM-style evaluation on novels (optional, for ecological validity)
+
+### Recommended Baselines
+- Random guessing from mentioned entities
+- Initial state copying (predict no change)
+- Most-recent-mention heuristic
+- Compare across model families and sizes (including code-pretrained variants)
+
+### Recommended Metrics
+- Exact match accuracy by character count and operation count
+- Per-character accuracy (does the model confuse Character A&#39;s attributes with Character B&#39;s?)
+- Confusion matrix between characters (are nearby characters more confused?)
+- Degradation curve: accuracy as a function of character count
+
+### Methodological Considerations
+- **Control for context length**: More characters = longer text — disentangle character count from length effects
+- **Code-pretrained models**: Literature strongly suggests these will perform best
+- **Attribute type matters**: Location tracking (concrete) may be easier than belief/intention tracking (abstract)
+- **Synthetic stories should be natural-sounding**: Use templates that read like actual narratives, not procedural instructions
+- **Position effects**: Characters introduced mid-story may be tracked worse (Lost in the Middle)
+- **Test both state-changed and unchanged entities**: Many benchmarks are inflated by trivial &#34;no change&#34; cases (Kim &amp; Schuster&#39;s key insight)
+
+
+════════════════════════════════════════════════════════════════════════════════
+                          PAPER REQUIREMENTS
+════════════════════════════════════════════════════════════════════════════════
+
+Generate a complete academic paper with the following structure:
+
+1. TITLE
+   - Clear, specific, informative
+   - Should convey main finding or contribution
+
+2. AUTHOR
+   - Use this exact author line in the \author{} block: Ari Holtzman and NeuriCo
+
+3. ABSTRACT (150-250 words)
+   - Problem statement
+   - Approach
+   - Key results
+   - Significance
+
+4. INTRODUCTION
+   - Research problem and motivation
+   - Gap in existing work
+   - Our contribution (be specific)
+   - Paper organization
+
+5. RELATED WORK
+   - Organized by theme/approach
+   - Position our work relative to prior work
+   - Cite papers from literature review
+
+6. METHODOLOGY
+   - Clear description of approach
+   - Experimental setup
+   - Datasets used
+   - Evaluation metrics
+   - Baselines
+
+7. RESULTS
+   - Present results with tables and figures
+   - Statistical analysis
+   - Comparison to baselines
+   - Ablation studies (if applicable)
+
+8. DISCUSSION
+   - Interpretation of results
+   - Limitations
+   - Broader implications
+
+9. CONCLUSION
+   - Summary of contributions
+   - Key findings
+   - Future work
+
+10. REFERENCES
+   - BibTeX format
+   - All cited papers
+
+════════════════════════════════════════════════════════════════════════════════
+                          OUTPUT FORMAT
+════════════════════════════════════════════════════════════════════════════════
+
+Create a MODULAR LaTeX project with the following directory structure:
+
+paper_draft/
+├── main.tex              # Main file that imports all sections
+├── references.bib        # BibTeX references
+├── sections/
+│   ├── abstract.tex      # Abstract content
+│   ├── introduction.tex  # Introduction section
+│   ├── related_work.tex  # Related work section
+│   ├── methodology.tex   # Methodology section
+│   ├── results.tex       # Results section
+│   ├── discussion.tex    # Discussion section
+│   └── conclusion.tex    # Conclusion section
+├── figures/              # Directory for any generated figures
+├── tables/               # Directory for complex standalone tables
+└── appendix/             # Directory for appendix sections (if needed)
+
+INSTRUCTIONS:
+1. First, create the directory structure above (mkdir -p paper_draft/sections paper_draft/figures paper_draft/tables paper_draft/appendix)
+2. Write main.tex using the EXACT preamble for NEURIPS:
+
+   \documentclass{article}
+   \usepackage[final]{neurips_2025}  % NEURIPS style (neurips_2025.sty is in paper_draft/)
+   \usepackage[hidelinks]{hyperref}  % REQUIRED: clickable links
+   \usepackage{booktabs}  % REQUIRED: professional tables
+   \usepackage{graphicx}
+   \usepackage{amsmath,amssymb}
+
+   % Import command files
+   \input{commands/math}
+   \input{commands/general}
+   \input{commands/macros}
+
+   % Use this bibliography style:
+   \bibliographystyle{plainnat}
+
+   \author{Ari Holtzman and NeuriCo}
+
+   - Use \input{sections/...} to include each section
+   - Use \bibliography{references} for references
+3. Write each section file with COMPLETE content (no placeholders)
+4. Each section file should include its \section{} command
+5. Write references.bib with all citations in BibTeX format
+6. After writing all files, compile the paper:
+   cd paper_draft && pdflatex -interaction=nonstopmode main.tex && bibtex main && pdflatex -interaction=nonstopmode main.tex && pdflatex -interaction=nonstopmode main.tex
+
+This modular structure allows humans to easily:
+- Edit individual sections without navigating a large file
+- Track changes per section
+- Reuse sections across different paper versions
+
+════════════════════════════════════════════════════════════════════════════════
+                          QUALITY REQUIREMENTS
+════════════════════════════════════════════════════════════════════════════════
+
+- Academic tone throughout
+- All claims must be supported by data from the experiment report
+- Proper citations using \cite{} commands
+- Clear figures and tables with proper captions
+- NO placeholder text - every section must have real content
+- The paper MUST compile without errors
+- If compilation fails, debug and fix the LaTeX errors
+
+════════════════════════════════════════════════════════════════════════════════
+                          LAB WRITING STYLE
+════════════════════════════════════════════════════════════════════════════════
+
+Follow these lab-specific conventions to match our paper style:
+
+1. LANGUAGE STYLE:
+   - Use active voice: "We propose", "We examine", "We focus on"
+   - Be direct and confident: "Our main question is...", "We hypothesize that..."
+   - State things clearly and simply - prefer plain language over jargon
+   - Use bold questions as paragraph organizers: {\bf what is X?}
+   - Include specific quantitative claims: "8.97% over baseline"
+   - Avoid fancy wording: "utilize" → "use", "facilitate" → "help"
+
+2. INTRODUCTION STRUCTURE:
+   - Engaging hook (get to the point quickly)
+   - Problem importance
+   - Gap identification
+   - Your approach with method figure reference
+   - Quantitative preview of results
+   - Contribution bullets (3-4 items, action verbs)
+
+3. CONTRIBUTION LISTS:
+   \begin{itemize}[leftmargin=*,itemsep=0pt,topsep=0pt]
+       \item We propose...
+       \item We conduct...
+       \item We complement...
+   \end{itemize}
+
+4. MODULAR COMMANDS STRUCTURE:
+   Command templates are pre-copied to paper_draft/commands/:
+   - math.tex: Math notation macros
+   - general.tex: Formatting macros
+   - macros.tex: Project-specific term definitions (customize this for your paper)
+
+   In main.tex, include:
+   \input{commands/math}
+   \input{commands/general}
+   \input{commands/macros}
+
+5. REFERENCE CONVENTIONS:
+   Use reference macros from math.tex:
+   - \figref{fig:name} for "figure 1" (lowercase, in-sentence)
+   - \Figref{fig:name} for "Figure 1" (capitalized, start of sentence)
+   - \secref{sec:name} for "section 2"
+
+6. TEXT FORMATTING:
+   - Use \para{Header text} for bold paragraph headers
+   - Define method/dataset names with \textsc and \xspace:
+     \newcommand{\methodname}{\textsc{MethodName}\xspace}
+
+7. TABLE FORMATTING:
+   - Use booktabs package (no vertical lines)
+   - Use \resizebox{\textwidth}{!}{...} for wide tables
+   - Use @{} to remove padding at table edges
+   - Use \cmidrule(lr){x-y} for sub-headers
+   - Use \textsc{} for dataset/method names in headers
+   - Bold best results with {\bf ...}
+
+8. FIGURE FORMATTING:
+   - Use 0.32\textwidth for 3-column subfigures
+   - Use 0.95\linewidth for full-width figures
+   - Use \input{figures/legend} for shared legends
+   - Write self-contained captions explaining key observations
+
+9. RESULTS PRESENTATION:
+   - Define \increase and \decrease for colored arrows (green up, red down)
+   - Bold best results in tables
+   - Report confidence intervals when available
+
+10. ALGORITHM STYLING:
+    - Use algpseudocode with [noend]
+    - Use \triangleright for comments
+
+11. HYPERLINKS (REQUIRED):
+    - Always use \usepackage[hidelinks]{hyperref} or with colored links
+    - All citations, section refs, figure refs, table refs must be clickable
+    - This is essential for reader navigation
+
+════════════════════════════════════════════════════════════════════════════════
+                          WORKFLOW: REVIEW AND REFLECT
+════════════════════════════════════════════════════════════════════════════════
+
+Before calling finish, you MUST complete these review steps:
+
+1. REVIEW RESOURCES (at the start):
+   - Read .claude/skills/paper-writer/SKILL.md for detailed guidance
+   - Study templates/paper_writing/lab_style_guide.md for style conventions
+   - Browse paper_examples/ for formatting and language patterns
+
+2. SELF-REFLECTION (before finishing):
+   After writing all sections, review your work against these criteria:
+
+   LANGUAGE CHECK:
+   - [ ] Is the writing clear and jargon-free?
+   - [ ] Are claims specific with quantitative support?
+   - [ ] Is active voice used throughout?
+
+   FORMATTING CHECK:
+   - [ ] Does main.tex include \input{commands/math}, \input{commands/general}, \input{commands/macros}?
+   - [ ] Is hyperref package included for clickable references?
+   - [ ] Do tables use booktabs (no vertical lines)?
+   - [ ] Are best results bolded in tables?
+   - [ ] Are figures/tables properly captioned?
+
+   STRUCTURE CHECK:
+   - [ ] Does introduction follow: hook → importance → gap → approach → preview → contributions?
+   - [ ] Are contribution bullets specific with action verbs?
+   - [ ] Does the paper compile without errors?
+
+3. FIX ISSUES:
+   - Address any issues found in the self-reflection
+   - Re-compile and verify the PDF looks correct
+
+Only after completing this review should you consider the paper finished.

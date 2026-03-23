@@ -1,87 +1,45 @@
-# Character Tracking Limits in Language Models
+# How Many Characters Can a Language Model Keep Track Of?
 
-## Overview
-
-This research project investigates how many characters language models can keep track of in-context. We systematically tested GPT-4.1 and GPT-3.5-turbo on synthetic narratives with 2-20 characters, measuring their ability to track character states (location, mood, possessions).
+Research project investigating the limits of character tracking in frontier language models using controlled synthetic narratives.
 
 ## Key Findings
 
-- **GPT-4.1 achieves 99.95% accuracy** across all configurations, showing no observable character tracking limit up to 20 characters
-- **GPT-3.5-turbo achieves 81.4% accuracy** with no degradation as character count increases
-- **Question type matters**: "Holding" questions are 19% harder than location/mood questions for GPT-3.5-turbo
-- **No capacity cliff found**: Both models maintain consistent performance from 2 to 20 characters
+- **Perfect tracking up to 16 characters**: Both GPT-4.1 and GPT-4.1-mini achieve 100% accuracy with up to 16 characters
+- **Graceful degradation, not a cliff**: Accuracy drops gradually to ~93% at 64 characters — no sharp threshold
+- **Confusion, not forgetting**: 93.9% of errors are confusion errors (swapping attributes between characters), suggesting overlapping distributed representations
+- **Smaller model wins**: GPT-4.1-mini (95.3%) outperforms GPT-4.1 (93.6%) overall, a counterintuitive finding
+- **State change complexity matters**: Doubling state changes from 2→4 per character drops GPT-4.1 from 86.9% to 84.4% at 32 characters
+
+See [REPORT.md](REPORT.md) for the full research report with statistical analysis and visualizations.
+
+## Reproduce
+
+```bash
+# Setup
+uv venv && source .venv/bin/activate
+uv add openai numpy matplotlib pandas scipy tqdm
+
+# Run experiments
+export OPENAI_API_KEY=your_key
+python src/experiment.py           # Main experiment (2-32 chars)
+python src/experiment_extended.py  # Extended (up to 64 chars + stress test)
+python src/analyze.py              # Analysis and plots
+```
 
 ## Project Structure
 
 ```
-.
-├── REPORT.md                    # Full research report with findings
-├── README.md                    # This file
-├── planning.md                  # Research plan
-├── pyproject.toml               # Project dependencies
-├── src/
-│   ├── experiment.py            # Main experiment code
-│   └── visualize.py             # Visualization generation
-├── datasets/
-│   ├── character_tracking_synthetic.json  # Primary dataset (90 examples)
-│   └── tasks_1-20_v1-2/         # bAbI tasks for reference
-├── results/
-│   ├── raw_results.csv          # All predictions and ground truth
-│   ├── analysis.json            # Computed statistics
-│   └── figures/                 # Visualization plots
-├── papers/                      # Reference papers
-├── code/                        # Baseline implementations
-└── literature_review.md         # Background literature review
+src/
+├── story_generator.py      # Synthetic narrative generator (2-64 characters)
+├── experiment.py            # Main experiment runner
+├── experiment_extended.py   # Extended experiment (48, 64 chars + stress test)
+└── analyze.py               # Statistical analysis and visualization
+results/
+├── plots/                   # Degradation curves, error analysis plots
+├── all_results.json         # Raw experimental results
+└── extended_results.json    # Extended experiment results
+planning.md                  # Research plan and methodology
+REPORT.md                    # Full research report
+literature_review.md         # Literature review
+resources.md                 # Resource catalog
 ```
-
-## Quick Start
-
-```bash
-# Set up environment
-uv venv
-source .venv/bin/activate
-uv add numpy pandas matplotlib openai httpx tqdm scipy
-
-# Set API key
-export OPENAI_API_KEY="your-key"
-
-# Run experiment
-python src/experiment.py
-
-# Generate visualizations
-python src/visualize.py
-```
-
-## Dataset
-
-The synthetic dataset (`datasets/character_tracking_synthetic.json`) contains:
-- 90 stories with varying configurations
-- Character counts: 2, 3, 4, 5, 6, 8, 10, 12, 15, 20
-- Action counts: 5, 10, 20
-- 3 trials per configuration
-
-Each story has questions about each character's:
-- **Location**: "Where is Alice?" → "kitchen"
-- **Mood**: "How does Alice feel?" → "happy"
-- **Holding**: "What is Alice holding?" → "book" or "nothing"
-
-## Results Summary
-
-| Model | Overall Accuracy |
-|-------|-----------------|
-| GPT-4.1 | 99.95% |
-| GPT-3.5-turbo | 81.4% |
-| First-State Baseline | 78.2% |
-| Random Baseline | 12.7% |
-
-See `REPORT.md` for detailed analysis and visualizations.
-
-## References
-
-- Kim & Schuster (2023). Entity Tracking in Language Models. ACL.
-- Liu et al. (2024). Lost in the Middle. TACL.
-- Hsieh et al. (2024). RULER Benchmark. COLM.
-
-## License
-
-Research code for experimental purposes.

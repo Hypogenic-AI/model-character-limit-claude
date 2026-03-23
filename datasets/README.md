@@ -1,193 +1,316 @@
-# Datasets for Character Tracking Research
+# Datasets for Character/Entity Tracking Research
 
-This directory contains datasets for studying LLM character tracking limits.
+This directory contains datasets for studying how many characters an LLM can keep track of in narratives.
 
 ## Summary
 
-| Dataset | Purpose | Size | Format |
-|---------|---------|------|--------|
-| character_tracking_synthetic | Primary experiment dataset | 90 examples | JSON |
-| bAbI Tasks | Entity tracking baseline | 10K train/1K test per task | TXT |
-| NarrativeQA samples | Story QA reference | 10 samples | JSON |
+| Dataset | Purpose | Size | Format | Location |
+|---------|---------|------|--------|----------|
+| Boxes (Kim & Schuster 2023) | Entity state tracking in closed-world | ~90k examples (v1 original) | JSONL | `boxes/` |
+| OpenToM | Theory of mind, character location/belief | 13,708 examples | JSON | `opentom/` |
+| ProPara (allenai) | Procedural entity state tracking | ~488 paragraphs, 81k annotations | JSON/TSV | `propara/` |
+| SimpleToM (allenai) | Explicit + applied theory of mind | 1,147 stories × 3 QA types | JSONL | `simpletom/` |
+| NarrativeQA (DeepMind) | Story reading comprehension | 32k train / 10.5k test | JSONL | `narrativeqa/` |
+| Theory of Mind (grimulkan) | ToM instruction-following | 539 examples | JSONL | `theory_of_mind_grimulkan/` |
+| character_tracking_synthetic | Primary synthetic experiment set | 90 examples | JSON | `character_tracking_synthetic.json` |
 
-## Dataset 1: Character Tracking Synthetic Dataset
+**Note:** CHATTER (character attribution, arxiv 2411.05227) does not have a public data release; its GitHub repo (usc-sail/mica-character-attribution) contains only crawling/processing scripts. See below for details.
+
+---
+
+## Dataset 1: Boxes (Kim & Schuster, ACL 2023)
 
 ### Overview
-- **Source**: Generated with `character_tracking_generator.py`
-- **Size**: 90 examples covering various configurations
+- **Paper**: "Entity Tracking in Language Models" (ACL 2023)
+- **Task**: Track which objects are in which boxes after a sequence of move/put/remove operations
+- **Source code**: `/workspaces/model-character-limit-claude/code/entity-tracking-lms/`
+- **Format**: JSONL with fields: `sentence`, `sentence_masked`, `masked_content`, `sample_id`, `numops`
+
+### Contents
+- `boxes/boxes-v1-original/` — original release (password-extracted from ZIP, password: `iamnotaLM`)
+  - `t5_boxes_nso_exp2_max3/` — main split: 90k train, 20k dev, 90k test
+  - `t5_boxes_nso_exp2_max3_alt_forms_train/` — alternative surface forms
+  - `t5_boxes_nso_exp2_max3_move_contents/` — "move contents" operation variant
+  - `few_shot_boxes_nso_exp2_max3/` — few-shot format
+- `boxes/` (root) — freshly generated split (2200 samples, max_items_per_box=1, 7 boxes, 10 ops)
+
+### Key parameters
+- 7 boxes, up to 3 items per box (original v1), 10 operations per sequence
+- Splits by number of operations: 0–10 (tests compositional generalization)
+- Also varies: object vocabulary (in/out of BNC), alternative surface forms
+
+### Re-generation
+```bash
+cd /workspaces/model-character-limit-claude/code/entity-tracking-lms
+source /workspaces/model-character-limit-claude/.venv/bin/activate
+python src/dataset_generation/generate_boxes_data.py \
+    --max_items_per_box 1 \
+    --num_samples 2200 \
+    --output_dir /workspaces/model-character-limit-claude/datasets/boxes/ \
+    --object_vocabulary_file data/objects_with_bnc_frequency.csv \
+    --disjoint_object_vocabulary_file data/objects_not_in_bnc.csv
+```
+
+### Citation
+```bibtex
+@inproceedings{kim-schuster-2023-entity,
+    title = "Entity Tracking in Language Models",
+    author = "Kim, Najoung and Schuster, Sebastian",
+    booktitle = "Proceedings of ACL 2023",
+    year = "2023",
+    url = "https://aclanthology.org/2023.acl-long.213"
+}
+```
+
+---
+
+## Dataset 2: OpenToM
+
+### Overview
+- **Paper**: "OpenToM: A Comprehensive Benchmark for Evaluating Theory-of-Mind Reasoning Capabilities of Large Language Models" (2024)
+- **Task**: Character location tracking + belief reasoning (first-order and second-order ToM)
+- **Source**: `/workspaces/model-character-limit-claude/code/OpenToM/data/` (copied here)
 - **Format**: JSON
-- **Task**: Track multiple characters' states through a narrative
 
-### Configuration
-The dataset systematically varies:
-- **Number of characters**: 2, 3, 4, 5, 6, 8, 10, 12, 15, 20
-- **Number of actions**: 5, 10, 20
-- **3 trials** per configuration for statistical reliability
+### Contents
+- `opentom.json` — 13,708 QA examples (standard narratives)
+- `opentom_long.json` — longer narrative version
+- `opentom_data/` — broken down by question type:
+  - `location_cg_fo.json` / `location_cg_so.json` — coarse-grained location (first/second order)
+  - `location_fg_fo_new.json` / `location_fg_so_new.json` — fine-grained location
+  - `multihop_fo.json` / `multihop_so.json` — multi-hop reasoning
+  - `attitude.json` — character attitude questions
+  - `meta_data.json` / `meta_data_long.json` — story metadata
 
-### Data Structure
+### Example structure
 ```json
 {
-  "story": "Full narrative text",
-  "sentences": ["List", "of", "sentences"],
-  "characters": ["Alice", "Bob", ...],
-  "num_characters": 5,
-  "num_actions": 10,
-  "final_states": {
-    "Alice": {"location": "kitchen", "holding": "book", "mood": "happy"}
-  },
-  "questions": [
-    {"question": "Where is Alice?", "answer": "kitchen", "type": "location"}
-  ]
+  "plot": "Diego entered the patio. Amir entered the patio...",
+  "plot_info": {"mover": "Diego", "eoi": "scarf", "original_place": "basket", ...},
+  "preferences": {"mover": "...", "observer": "..."},
+  "personality": "Diego is an inconsiderate person.",
+  "questions": [...]
 }
 ```
 
-### Question Types
-1. **Location**: "Where is {character}?"
-2. **Mood**: "How does {character} feel?"
-3. **Holding**: "What is {character} holding?"
+### HuggingFace
+Dataset `hkust-nlp/opentom` is not currently accessible on the Hub. Use local copy.
 
-### Usage
-```python
-import json
-with open("datasets/character_tracking_synthetic.json") as f:
-    data = json.load(f)
+---
 
-# Access examples
-for example in data["examples"]:
-    print(f"Characters: {example['num_characters']}")
-    print(f"Story: {example['story'][:200]}...")
+## Dataset 3: ProPara (AllenAI, NAACL 2018 / EMNLP 2018)
+
+### Overview
+- **Paper**: "Tracking State Changes in Procedural Text" (NAACL 2018)
+- **Task**: Track entity existence and location through science process paragraphs
+- **Source**: Downloaded from https://github.com/allenai/propara
+- **Size**: 488 paragraphs, ~81k state annotations
+- **Format**: JSON (JSONL, one paragraph per line) and TSV
+
+### Contents
+- `propara/raw/` — raw files from GitHub
+  - `grids.v1.train.json` / `grids.v1.dev.json` / `grids.v1.test.json` — EMNLP18 format
+  - `grids.v1.train.tsv` / `grids.v1.dev.tsv` / `grids.v1.test.tsv` — TSV format
+  - `gold-full-grids.v3.tsv` — NAACL18 gold annotations
+- `propara/huggingface/` — task-formatted versions from HuggingFace
+  - `task1566_propara_structured_text_generation_*.jsonl` — structured generation
+  - `task1567_propara_question_generation_*.jsonl` — question generation
+  - `task1568_propara_classification_*.jsonl` — state change classification
+
+### Example structure
+```json
+{
+  "para_id": "37",
+  "sentence_texts": ["A plant or animal dies...", "Is buried in mud and silt.", ...],
+  "participants": ["plant; animal", "soft tissues", "bones", "mineral", "fossils"],
+  "states": [["watery environment", "watery environment", ...], ...]
+}
+```
+
+### Download instructions (refresh)
+```bash
+mkdir -p datasets/propara/raw
+for f in grids.v1.train.json grids.v1.dev.json grids.v1.test.json \
+          grids.v1.train.tsv grids.v1.dev.tsv grids.v1.test.tsv; do
+    curl -L "https://raw.githubusercontent.com/allenai/propara/master/data/emnlp18/$f" \
+         -o datasets/propara/raw/$f
+done
+curl -L "https://raw.githubusercontent.com/allenai/propara/master/data/naacl18/gold-full-grids.v3.tsv" \
+     -o datasets/propara/raw/gold-full-grids.v3.tsv
+```
+
+### Citation
+```bibtex
+@inproceedings{mishra2018tracking,
+    title = "Tracking State Changes in Procedural Text: a Challenge Dataset and Models for Process Paragraph Comprehension",
+    author = "Mishra, Bhavana Dalvi and Tandon, Niket and Bhagavatula, Chandra and Clark, Peter",
+    booktitle = "NAACL 2018",
+    year = "2018"
+}
 ```
 
 ---
 
-## Dataset 2: bAbI Tasks (Facebook Research)
+## Dataset 4: SimpleToM (AllenAI, 2024)
 
 ### Overview
-- **Source**: Facebook AI Research
-- **Size**: 10,000 training / 1,000 test examples per task
-- **Format**: Plain text
-- **Location**: `tasks_1-20_v1-2/en/`
+- **Paper**: "SimpleToM: Exposing the Gap between Explicit ToM Inference and Implicit ToM Application in LLMs" (2024)
+- **Task**: Theory of mind — mental state, behavior prediction, judgment
+- **Source**: `allenai/SimpleToM` on HuggingFace
+- **Size**: 1,147 stories × 3 QA types = 3,441 total QA examples
+- **Format**: JSONL
 
-### Relevant Tasks for Entity Tracking
-| Task | Name | Description |
-|------|------|-------------|
-| qa1 | Single Supporting Fact | Location tracking (1 hop) |
-| qa2 | Two Supporting Facts | Object+location tracking (2 hops) |
-| qa3 | Three Supporting Facts | Multi-hop reasoning |
-| qa5 | Three Argument Relations | Complex relations |
-| qa11 | Basic Coreference | Pronoun resolution |
-| qa13 | Compound Coreference | Complex coreference |
+### Contents
+- `simpletom/mental-state-qa_test.jsonl` — information awareness questions
+- `simpletom/behavior-qa_test.jsonl` — future behavior prediction
+- `simpletom/judgment-qa_test.jsonl` — reasonableness of behavior
+- `simpletom/story-data_test.jsonl` — full story metadata
 
-### Download Instructions
-
-**Already downloaded locally:**
-```bash
-# Data is in datasets/tasks_1-20_v1-2/en/
-```
-
-**To download fresh:**
-```bash
-wget http://www.thespermwhale.com/jaseweston/babi/tasks_1-20_v1-2.tar.gz
-tar -xzf tasks_1-20_v1-2.tar.gz
-```
-
-### Format
-Each line contains: `line_number text` or `line_number question \t answer \t supporting_facts`
-
-Example:
-```
-1 Mary moved to the bathroom.
-2 John went to the hallway.
-3 Where is Mary?     bathroom    1
-```
-
-### Usage
-```python
-def parse_babi(filename):
-    stories = []
-    current = {"context": [], "qa": []}
-    with open(filename) as f:
-        for line in f:
-            parts = line.strip().split()
-            idx = int(parts[0])
-            if idx == 1 and current["context"]:
-                stories.append(current)
-                current = {"context": [], "qa": []}
-            text = " ".join(parts[1:])
-            if "\t" in text:
-                q, a, _ = text.split("\t")
-                current["qa"].append((q, a))
-            else:
-                current["context"].append(text)
-    return stories
-```
-
----
-
-## Dataset 3: NarrativeQA Samples
-
-### Overview
-- **Source**: DeepMind (Hugging Face)
-- **Size**: 10 sample summaries (full dataset: 1,567 stories)
-- **Format**: JSON
-- **Task**: Reading comprehension on narratives
-
-### Download Instructions
-
-**Full dataset (via HuggingFace):**
+### Download instructions (refresh)
 ```python
 from datasets import load_dataset
-narr = load_dataset("deepmind/narrativeqa")
+import json
+for config in ['mental-state-qa', 'behavior-qa', 'judgment-qa', 'story-data']:
+    ds = load_dataset('allenai/SimpleToM', config)
+    for split, data in ds.items():
+        with open(f'datasets/simpletom/{config}_{split}.jsonl', 'w') as f:
+            for ex in data:
+                f.write(json.dumps(ex) + '\n')
 ```
 
-### Notes
-- Full stories are very long (100k+ words)
-- Useful for understanding character-centric question types
-- Questions often require reasoning about character relationships
-
----
-
-## Experimental Design Recommendations
-
-### Primary Experiments
-Use `character_tracking_synthetic.json` for controlled experiments:
-1. Fix number of actions, vary character count
-2. Measure accuracy degradation as characters increase
-3. Identify "breaking point" where model performance drops
-
-### Baseline Comparisons
-Use bAbI tasks to establish baseline performance:
-- Task 1: Basic location tracking
-- Task 2: Object+location tracking
-- Compare synthetic dataset performance to bAbI benchmarks
-
-### Evaluation Metrics
-- **Accuracy by character count**: What % of questions are correct?
-- **Per-character accuracy**: Does accuracy degrade for specific characters?
-- **Question type breakdown**: Location vs. mood vs. holding
-
----
-
-## Citation
-
-If using bAbI tasks:
+### Citation
 ```bibtex
-@article{weston2015towards,
-  title={Towards AI-complete question answering: A set of prerequisite toy tasks},
-  author={Weston, Jason and Bordes, Antoine and Chopra, Sumit and Rush, Alexander M and van Merri{\"e}nboer, Bart and Joulin, Armand and Mikolov, Tomas},
-  journal={arXiv preprint arXiv:1502.05698},
-  year={2015}
+@article{wilf2024simpletom,
+    title = "SimpleToM: Exposing the Gap between Explicit ToM Inference and Implicit ToM Application in LLMs",
+    author = "Wilf, Alex and others",
+    year = "2024",
+    url = "https://arxiv.org/abs/2410.13648"
 }
 ```
 
-If using NarrativeQA:
+---
+
+## Dataset 5: NarrativeQA (DeepMind, 2018)
+
+### Overview
+- **Paper**: "The NarrativeQA Reading Comprehension Challenge" (TACL 2018)
+- **Task**: Reading comprehension over full books and movie scripts
+- **Source**: `deepmind/narrativeqa` on HuggingFace
+- **Size**: 32,747 train / 3,461 validation / 10,557 test QA pairs across 1,567 documents
+- **Format**: JSONL (Q&A pairs; full document texts not stored locally due to size)
+
+### Contents
+- `narrativeqa/train.jsonl`, `test.jsonl`, `validation.jsonl`
+- Fields: `document_id`, `document_kind` (book/movie), `question`, `answers`
+
+### Note on characters
+NarrativeQA questions frequently ask about character actions, relationships, and motivations. Useful as a naturalistic benchmark for character tracking.
+
+### Download instructions (refresh)
+```python
+from datasets import load_dataset
+import json
+ds = load_dataset('deepmind/narrativeqa')
+for split, data in ds.items():
+    with open(f'datasets/narrativeqa/{split}.jsonl', 'w') as f:
+        for ex in data:
+            row = {
+                'document_id': ex['document']['id'],
+                'document_kind': ex['document']['kind'],
+                'question': ex['question'],
+                'answers': ex['answers'],
+            }
+            f.write(json.dumps(row) + '\n')
+```
+
+### Citation
 ```bibtex
 @article{kovcisky2018narrativeqa,
-  title={The NarrativeQA reading comprehension challenge},
-  author={Ko{\v{c}}isk{\'y}, Tom{\'a}{\v{s}} and Schwarz, Jonathan and Blunsom, Phil and Dyer, Chris and Hermann, Karl Moritz and Melis, G{\'a}bor and Grefenstette, Edward},
-  journal={Transactions of the Association for Computational Linguistics},
-  volume={6},
-  pages={317--328},
-  year={2018}
+    title = "The NarrativeQA Reading Comprehension Challenge",
+    author = "Ko{\v{c}}isk{\'y}, Tom{\'a}{\v{s}} and Schwarz, Jonathan and Blunsom, Phil and others",
+    journal = "Transactions of the Association for Computational Linguistics",
+    volume = "6",
+    pages = "317--328",
+    year = "2018"
 }
+```
+
+---
+
+## Dataset 6: Theory of Mind (grimulkan)
+
+### Overview
+- **Task**: Theory of mind instruction-following (single-turn)
+- **Source**: `grimulkan/theory-of-mind` on HuggingFace
+- **Size**: 539 examples
+- **Format**: JSONL (instruction/input/response triples)
+
+### Contents
+- `theory_of_mind_grimulkan/train.jsonl`
+
+### Download instructions (refresh)
+```python
+from datasets import load_dataset
+import json
+ds = load_dataset('grimulkan/theory-of-mind')
+for split, data in ds.items():
+    with open(f'datasets/theory_of_mind_grimulkan/{split}.jsonl', 'w') as f:
+        for ex in data:
+            f.write(json.dumps(ex) + '\n')
+```
+
+---
+
+## Dataset 7: character_tracking_synthetic.json (existing)
+
+Previously generated synthetic dataset for primary character tracking experiments.
+See original README content above for structure and usage.
+
+---
+
+## CHATTER (Not Available Publicly)
+
+**Paper**: "CHATTER: A Character Attribution Dataset for Narrative Understanding" (arXiv 2411.05227, 2024)
+
+CHATTER labels 88,148 character-attribute pairs across 2,998 characters and 660 movies. A validated subset called ChatterEval serves as an evaluation benchmark.
+
+**Status**: The GitHub repository (https://github.com/usc-sail/mica-character-attribution) contains only data collection and processing scripts. The actual dataset (screenplay text + annotations) is not publicly released and requires running the crawling pipeline with licensed screenplay data.
+
+---
+
+## Samples
+
+Quick-reference examples (5 instances each) are in `samples/`:
+- `boxes_sample.json` — Boxes entity tracking examples
+- `opentom_sample.json` — OpenToM theory of mind examples
+- `propara_sample.json` — ProPara procedural paragraphs
+- `simpletom_sample.json` — SimpleToM mental-state QA
+- `narrativeqa_sample.json` — NarrativeQA question-answer pairs
+
+---
+
+## Experimental Design Notes
+
+### For studying "how many characters can a model keep track of"
+
+| Dataset | Characters per story | Relevance |
+|---------|---------------------|-----------|
+| Boxes | N/A (objects in boxes) | Entity state tracking; scales with box/object count |
+| OpenToM | 2–5 typically | Character location + belief tracking in short narratives |
+| ProPara | 3–8 entities per paragraph | State change (exist/location) over process steps |
+| SimpleToM | 1–2 (dyadic) | Minimal characters; tests ToM inference quality |
+| NarrativeQA | 5–50+ | Full-length stories; character-centric QA |
+
+### Recommended experiment pipeline
+1. **Controlled scaling**: Use Boxes (vary box count) or generate synthetic narratives (vary character count) to find the break point
+2. **Naturalistic baseline**: Use ProPara and OpenToM as semi-naturalistic benchmarks
+3. **Full narrative**: Use NarrativeQA for real-world upper bound
+
+---
+
+## Installation
+
+```bash
+source /workspaces/model-character-limit-claude/.venv/bin/activate
+uv pip install datasets huggingface_hub
 ```

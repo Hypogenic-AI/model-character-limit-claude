@@ -1,0 +1,69 @@
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{The Tracking Limit Is Surprisingly High}
+
+The most striking finding is that frontier 2025 models maintain above 93\% accuracy even at 64~characters.
+This is a large improvement over prior benchmarks: \citet{kim2024code} reported 64.9\% for Code Llama~70B on the 7-entity \boxes task, and \citet{locations2025} found only 62\% accuracy on character-location tracking in fairy tales.
+Several factors likely contribute to this gap.
+First, our synthetic stories use a rigid and predictable structure (introduction $\rightarrow$ events $\rightarrow$ query) that may be easier to parse than naturalistic narratives with complex discourse structure.
+Second, the structured JSON output format may prompt more careful tracking than free-form answers.
+Third, the GPT-4.1 family represents a substantial capability jump over the models tested in prior work.
+
+\subsection{Why Confusion, Not Forgetting?}
+
+The dominance of confusion errors (93.9\% for \gptmini) has implications for how transformers represent tracked entities.
+If models maintained independent per-character memory slots, we would expect errors to be primarily \emph{forgetting}---a slot's content is lost or corrupted, and the model either returns the initial value or gives up.
+Instead, the model retrieves a plausible attribute value that happens to belong to the wrong character.
+This is consistent with character attributes being stored in overlapping distributed representations in the transformer's residual stream, where increased entity count leads to interference between representations.
+
+This behavioral pattern aligns with the mechanistic findings of \citet{li2025state}, who identified an Associative Algorithm in which transformers compute state updates through a parallel scan over attention heads.
+In such an architecture, ``memory'' for different entities shares the same representational substrate.
+As more entities compete for bandwidth, the probability of cross-entity interference increases---exactly the confusion pattern we observe.
+
+\subsection{Why Does \gptmini Outperform \gptfull?}
+
+Counterintuitively, the smaller \gptmini achieves higher overall accuracy (95.3\% vs.\ 93.6\% across all extended-experiment conditions).
+We identify two contributing factors.
+
+First, \gptfull has a specific weakness with compound possession-change sentences: it correctly processes the ``drop'' event but fails to register the subsequent ``pickup.''
+This accounts for the majority of its errors at 32~characters and produces the anomalous dip in its degradation curve.
+\gptmini does not exhibit this pattern.
+
+Second, optimized smaller models may allocate attention more efficiently for structured tracking tasks.
+The entity-tracking task has a relatively simple information structure---each character's state depends only on their own events---and may not benefit from the additional capacity that makes \gptfull superior on more complex reasoning tasks.
+However, we cannot distinguish these explanations without access to model internals.
+
+\subsection{Gradual Degradation Implies Continuous Capacity}
+
+We observe no sharp ``cliff'' in accuracy as character count increases.
+Instead, accuracy degrades smoothly from 100\% at 16~characters to $\sim$93\% at 64~characters.
+This gradual pattern is more consistent with a continuous resource (representational bandwidth shared across entities) than a discrete slot model (where we would expect accuracy to remain high until slots are exhausted, then drop sharply).
+
+\subsection{Limitations}
+
+Our study has several limitations that bound the generalizability of our findings.
+
+\para{Synthetic stories only.}
+Our narratives follow a rigid three-phase structure with explicit state changes and unambiguous attribute assignments.
+Real narratives involve implicit state changes, coreference, dialogue, unreliable narration, and complex discourse structure.
+Our accuracy numbers likely represent an upper bound on what models can achieve in naturalistic settings.
+
+\para{Two models from one provider.}
+We test only GPT-4.1 and GPT-4.1-mini.
+Results may not generalize to other model families (Claude, Gemini, Llama, Qwen).
+
+\para{Two attribute types.}
+We track only locations and possessions---concrete, easily verifiable attributes.
+Real narrative understanding requires tracking beliefs, intentions, emotions, and relationships, which may be substantially harder.
+
+\para{Structured output format.}
+The JSON batch-query format may prompt more careful tracking than open-ended questions.
+An interactive question-by-question protocol might yield different results.
+
+\para{Small sample sizes at high $N$.}
+The extended experiment uses only 3~stories per character count.
+While confidence intervals account for sampling variability, the true variability across story structures may be larger.
+
+\para{Temperature 0 does not eliminate stochasticity.}
+OpenAI models are not fully deterministic even at temperature~0 due to non-deterministic GPU operations, so our results may vary slightly across runs.
